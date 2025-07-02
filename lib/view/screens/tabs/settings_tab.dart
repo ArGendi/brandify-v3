@@ -106,162 +106,162 @@ class SettingsTab extends StatelessWidget {
                     );
                   },
                 ),
-                _buildSettingItem(
-                  AppLocalizations.of(context)!.changePackage,
-                  Icons.card_membership_outlined,
-                  AppLocalizations.of(context)!.upgradePlan,
-                  () {
-                    if(Package.type == PackageType.offline)
-                    showModalBottomSheet(
-                      context: context,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      builder:
-                          (context) => BlocProvider(
-                            create: (context) => PackageCubit(),
-                            child: BlocConsumer<PackageCubit, PackageState>(
-                              listener: (context, state) {
-                                if (state is PackageSuccess) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(state.message)),
-                                  );
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => HomeScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                } else if (state is PackageError) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(state.error),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              },
-                              builder: (context, state) {
-                                return Container(
-                                  padding: EdgeInsets.all(20),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 40,
-                                        height: 4,
-                                        margin: EdgeInsets.only(bottom: 20),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[300],
-                                          borderRadius: BorderRadius.circular(
-                                            2,
-                                          ),
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.swap_horiz,
-                                        size: 40,
-                                        color: mainColor,
-                                      ),
-                                      SizedBox(height: 15),
-                                      Text(
-                                        AppLocalizations.of(context)!.changePackage,
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 10),
-                                      Text(
-                                        AppLocalizations.of(context)!.switchPackageConfirm(Package.type == PackageType.offline ? 'online' : 'offline'),
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      SizedBox(height: 20),
-                                      if (state is PackageLoading)
-                                        CircularProgressIndicator(
-                                          color: mainColor,
-                                        )
-                                      else
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.pop(context),
-                                                child: Text(AppLocalizations.of(context)!.cancel),
-                                                style: TextButton.styleFrom(
-                                                  padding: EdgeInsets.symmetric(
-                                                    vertical: 15,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: 10),
-                                            Expanded(
-                                              child: BlocBuilder<
-                                                PackageCubit,
-                                                PackageState>(
-                                                builder: (context, state) {
-                                                  if(state is PackageLoading){
-                                                    return Loading();
-                                                  }
-                                                  else{
-                                                    return ElevatedButton(
-                                                    onPressed: () async{
-                                                      await PackageCubit.get(
-                                                        context,
-                                                      ).convertPackage(context);
-                                                      navigatorKey.currentState?.pop();
-                                                    },
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor:
-                                                          mainColor,
-                                                      foregroundColor:
-                                                          Colors.white,
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                            vertical: 15,
-                                                          ),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              10,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                    child: Text(AppLocalizations.of(context)!.convert),
-                                                  );
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                    );
-                    else{
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(AppLocalizations.of(context)!.alreadyOnline),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                // _buildSettingItem(
+                //   AppLocalizations.of(context)!.changePackage,
+                //   Icons.card_membership_outlined,
+                //   AppLocalizations.of(context)!.upgradePlan,
+                //   () {
+                //     if(Package.type == PackageType.offline)
+                //     showModalBottomSheet(
+                //       context: context,
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.vertical(
+                //           top: Radius.circular(20),
+                //         ),
+                //       ),
+                //       builder:
+                //           (context) => BlocProvider(
+                //             create: (context) => PackageCubit(),
+                //             child: BlocConsumer<PackageCubit, PackageState>(
+                //               listener: (context, state) {
+                //                 if (state is PackageSuccess) {
+                //                   Navigator.pop(context);
+                //                   ScaffoldMessenger.of(context).showSnackBar(
+                //                     SnackBar(content: Text(state.message)),
+                //                   );
+                //                   Navigator.pushAndRemoveUntil(
+                //                     context,
+                //                     MaterialPageRoute(
+                //                       builder: (_) => HomeScreen(),
+                //                     ),
+                //                     (route) => false,
+                //                   );
+                //                 } else if (state is PackageError) {
+                //                   ScaffoldMessenger.of(context).showSnackBar(
+                //                     SnackBar(
+                //                       content: Text(state.error),
+                //                       backgroundColor: Colors.red,
+                //                     ),
+                //                   );
+                //                 }
+                //               },
+                //               builder: (context, state) {
+                //                 return Container(
+                //                   padding: EdgeInsets.all(20),
+                //                   child: Column(
+                //                     mainAxisSize: MainAxisSize.min,
+                //                     children: [
+                //                       Container(
+                //                         width: 40,
+                //                         height: 4,
+                //                         margin: EdgeInsets.only(bottom: 20),
+                //                         decoration: BoxDecoration(
+                //                           color: Colors.grey[300],
+                //                           borderRadius: BorderRadius.circular(
+                //                             2,
+                //                           ),
+                //                         ),
+                //                       ),
+                //                       Icon(
+                //                         Icons.swap_horiz,
+                //                         size: 40,
+                //                         color: mainColor,
+                //                       ),
+                //                       SizedBox(height: 15),
+                //                       Text(
+                //                         AppLocalizations.of(context)!.changePackage,
+                //                         style: TextStyle(
+                //                           fontSize: 20,
+                //                           fontWeight: FontWeight.bold,
+                //                         ),
+                //                       ),
+                //                       SizedBox(height: 10),
+                //                       Text(
+                //                         AppLocalizations.of(context)!.switchPackageConfirm(Package.type == PackageType.offline ? 'online' : 'offline'),
+                //                         textAlign: TextAlign.center,
+                //                         style: TextStyle(
+                //                           color: Colors.grey[600],
+                //                           fontSize: 16,
+                //                         ),
+                //                       ),
+                //                       SizedBox(height: 20),
+                //                       if (state is PackageLoading)
+                //                         CircularProgressIndicator(
+                //                           color: mainColor,
+                //                         )
+                //                       else
+                //                         Row(
+                //                           children: [
+                //                             Expanded(
+                //                               child: TextButton(
+                //                                 onPressed:
+                //                                     () =>
+                //                                         Navigator.pop(context),
+                //                                 child: Text(AppLocalizations.of(context)!.cancel),
+                //                                 style: TextButton.styleFrom(
+                //                                   padding: EdgeInsets.symmetric(
+                //                                     vertical: 15,
+                //                                   ),
+                //                                 ),
+                //                               ),
+                //                             ),
+                //                             SizedBox(width: 10),
+                //                             Expanded(
+                //                               child: BlocBuilder<
+                //                                 PackageCubit,
+                //                                 PackageState>(
+                //                                 builder: (context, state) {
+                //                                   if(state is PackageLoading){
+                //                                     return Loading();
+                //                                   }
+                //                                   else{
+                //                                     return ElevatedButton(
+                //                                     onPressed: () async{
+                //                                       await PackageCubit.get(
+                //                                         context,
+                //                                       ).convertPackage(context);
+                //                                       navigatorKey.currentState?.pop();
+                //                                     },
+                //                                     style: ElevatedButton.styleFrom(
+                //                                       backgroundColor:
+                //                                           mainColor,
+                //                                       foregroundColor:
+                //                                           Colors.white,
+                //                                       padding:
+                //                                           EdgeInsets.symmetric(
+                //                                             vertical: 15,
+                //                                           ),
+                //                                       shape: RoundedRectangleBorder(
+                //                                         borderRadius:
+                //                                             BorderRadius.circular(
+                //                                               10,
+                //                                             ),
+                //                                       ),
+                //                                     ),
+                //                                     child: Text(AppLocalizations.of(context)!.convert),
+                //                                   );
+                //                                   }
+                //                                 },
+                //                               ),
+                //                             ),
+                //                           ],
+                //                         ),
+                //                     ],
+                //                   ),
+                //                 );
+                //               },
+                //             ),
+                //           ),
+                //     );
+                //     else{
+                //       ScaffoldMessenger.of(context).showSnackBar(
+                //         SnackBar(
+                //           content: Text(AppLocalizations.of(context)!.alreadyOnline),
+                //         ),
+                //       );
+                //     }
+                //   },
+                // ),
                  
                 _buildSettingItem(
                   AppLocalizations.of(context)!.language,

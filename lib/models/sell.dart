@@ -24,6 +24,7 @@ class Sell{
   bool isRefunded = false;
   SellPlace? place;
   DateTime? createdAt;
+  String? status;
 
   Sell({this.id, this.backendId, this.product, this.date, this.quantity, this.priceOfSell, 
     this.profit = 0, this.sideExpenses = const [], this.extraExpenses = 0, this.size,
@@ -51,6 +52,7 @@ class Sell{
   Sell.fromShopifyOrder(Map<String, dynamic> order, List<Product> allProducts) {
     shopifyId = order['id'];
     date = DateTime.parse(order['created_at']);
+    status = order['financial_status'];
     
     if (order['line_items']?.isNotEmpty == true) {
       final lineItem = order['line_items'][0];
@@ -119,10 +121,10 @@ class Sell{
 
   String getPlace(){
     switch(place){
-      case SellPlace.online: return AppLocalizations.of(navigatorKey.currentContext!)!.online;
-      case SellPlace.store: return AppLocalizations.of(navigatorKey.currentContext!)!.store;
-      case SellPlace.inEvent: return AppLocalizations.of(navigatorKey.currentContext!)!.event;
-      default: return AppLocalizations.of(navigatorKey.currentContext!)!.other;
+      case SellPlace.online: return "Online";
+      case SellPlace.store: return "Store";
+      case SellPlace.inEvent: return "In event";
+      default: return "Other";
     }
   }
 

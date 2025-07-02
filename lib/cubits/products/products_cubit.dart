@@ -75,7 +75,7 @@ class ProductsCubit extends Cubit<ProductsState> {
         shopify: () async{
           print("getting product from shopify");
           print("Admin: ${ShopifyServices.adminAPIAcessToken}");
-          print(ShopifyServices.storeFrontAPIAcessToken);
+          // print(ShopifyServices.storeFrontAPIAcessToken);
           print("Store id: ${ShopifyServices.storeId}");
           print(ShopifyServices.locationId);
           List shopifyProducts = await ShopifyServices().getAllProducts();
@@ -359,7 +359,7 @@ class ProductsCubit extends Cubit<ProductsState> {
           productId = products[i].id;
         },
         shopify: () async{
-          productId = products[i].shopifyId;
+          productId = products[i].shopifyId ?? products[i].backendId;
         }
       );
       if (productId == id) {
@@ -418,6 +418,32 @@ class ProductsCubit extends Cubit<ProductsState> {
     products = [];
     filteredProducts = [];
     emit(ProductsInitial());
+  }
+
+  Future<void> updateShopifyProductCost(Product product, BuildContext context) async {
+    try {
+      var response = await FirestoreServices().set(
+        productsTable,
+        product.shopifyId.toString(),
+        {"price": product.price},
+      );
+      if(response.status == Status.success){
+        int index = products.indexWhere((e) => e.shopifyId == product.shopifyId);
+        if(index != -1){
+          products[index].price = product.price;
+          emit(EditProductState());
+          _showSuccessSnackBar(context, AppLocalizations.of(context)!.productUpdated);
+        }
+        else{
+          _showErrorSnackBar(context, AppLocalizations.of(context)!.errorUpdatingProduct);
+        }
+      }
+      else{
+        _showErrorSnackBar(context, AppLocalizations.of(context)!.errorUpdatingProduct);
+      }
+    } catch (e) {
+      _showErrorSnackBar(context, AppLocalizations.of(context)!.errorUpdatingProduct);
+    }
   }
 }
 

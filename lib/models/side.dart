@@ -13,6 +13,7 @@ class Side{
   }
   Side.fromJson(Map<dynamic, dynamic> json){
     id = json["id"];
+    backendId = json["backendId"];
     name = json["name"];
     price = json["price"];
     quantity = json["quantity"];
@@ -22,6 +23,7 @@ class Side{
   Map<String, dynamic> toJson(){
     return {
       "id": id,
+      "backendId": backendId,
       "name": name,
       "price": price,
       "quantity": quantity,

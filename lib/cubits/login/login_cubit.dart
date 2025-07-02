@@ -14,11 +14,12 @@ import 'package:brandify/models/local/cache.dart';
 import 'package:brandify/models/package.dart';
 import 'package:brandify/view/screens/home_screen.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:brandify/models/handler/firebase_error_handler.dart';
 part 'login_state.dart';
 
 class LoginCubit extends Cubit<LoginState> {
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  late String phone;
+  late String email;
   late String password;
 
   LoginCubit() : super(LoginInitial());
@@ -34,10 +35,22 @@ class LoginCubit extends Cubit<LoginState> {
       emit(LoadingState());
 
       // Login attempt
-      var loginResponse = await AuthServices.login("$phone@brandify.com", password);
+      var loginResponse = await AuthServices.login(email, password);
       if (loginResponse.status != Status.success) {
         emit(FailState());
-        _showError(context, l10n.loginFailed(loginResponse.data));
+        String errorMsg = loginResponse.data ?? '';
+        // Try to extract Firebase error code if present
+        if (errorMsg.contains(']')) {
+          // Format: [firebase_auth/wrong-password] message
+          final codeMatch = RegExp(r'\[(.*?)\]').firstMatch(errorMsg);
+          if (codeMatch != null && codeMatch.groupCount > 0) {
+            final code = codeMatch.group(1)?.split('/').last;
+            if (code != null) {
+              errorMsg = FirebaseErrorHandler.getError(l10n, code);
+            }
+          }
+        }
+        _showError(context, errorMsg.isNotEmpty ? errorMsg : l10n.loginFailed('Unknown error'));
         return;
       }
 

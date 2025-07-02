@@ -1,6 +1,8 @@
 import 'package:bloc/bloc.dart';
 import 'package:brandify/main.dart';
 import 'package:brandify/models/local/hive_services.dart';
+import 'package:brandify/view/widgets/custom_button.dart';
+import 'package:brandify/view/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
@@ -11,7 +13,7 @@ import 'package:brandify/models/extra_expense.dart';
 import 'package:brandify/models/firebase/firestore/extra_expenses_services.dart';
 import 'package:brandify/models/firebase/firestore/firestore_services.dart';
 import 'package:brandify/models/package.dart';
-
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 part 'extra_expenses_state.dart';
 
 class ExtraExpensesCubit extends Cubit<ExtraExpensesState> {
@@ -53,7 +55,7 @@ class ExtraExpensesCubit extends Cubit<ExtraExpensesState> {
     expenses = List.from(_allExpenses);
     emit(ExtraExpensesLoaded()); 
   }
-  Future<void> getAllExpenses() async {
+  Future<int> getAllExpenses() async {
     try {
       emit(ExtraExpensesLoading());
       await Package.checkAccessability(
@@ -72,8 +74,11 @@ class ExtraExpensesCubit extends Cubit<ExtraExpensesState> {
         },
       );
       emit(ExtraExpensesLoaded());
+      int totalCost = expenses.fold(0, (sum, expense) => sum + (expense.price ?? 0));
+      return totalCost;
     } catch (e) {
       emit(ExtraExpensesError(e.toString()));
+      return 0;
     }
   }
 
@@ -231,5 +236,63 @@ class ExtraExpensesCubit extends Cubit<ExtraExpensesState> {
     expenses = [];
     _allExpenses = [];
     emit(ExtraExpensesInitial());
+  }
+
+  void showExpenseDetails(BuildContext context, ExtraExpense expense, int index) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              AppLocalizations.of(context)!.expenseDetails,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: mainColor,
+              ),
+            ),
+            SizedBox(height: 20),
+            DetailRow(
+              icon: Icons.label,
+              label:  AppLocalizations.of(context)!.name,
+              value: expense.name ?? '',
+            ),
+            DetailRow(
+              icon: Icons.attach_money,
+              label:  AppLocalizations.of(context)!.amount,
+              value: expense.price?.toString() ?? '',
+            ),
+            DetailRow(
+              icon: Icons.calendar_today,
+              label:  AppLocalizations.of(context)!.date,
+              value: expense.date?.toString().split(' ')[0] ?? '',
+            ),
+            SizedBox(height: 20),
+            CustomButton(
+              text: AppLocalizations.of(context)!.close,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -1,4 +1,6 @@
+import 'package:brandify/cubits/country_code/country_code_cubit.dart';
 import 'package:brandify/cubits/language/language_cubit.dart';
+import 'package:brandify/cubits/phone_number/phone_number_cubit.dart';
 import 'package:brandify/view/screens/dashboard_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -70,6 +72,8 @@ void main() async {
         BlocProvider(create: (_) => RegisterCubit()),
         BlocProvider(create: (_) => AppUserCubit()),
         BlocProvider(create: (_) => ExtraExpensesCubit()),
+        BlocProvider(create: (_) => CountryCodeCubit()),
+        BlocProvider(create: (_) => PhoneNumberCubit()),
       ],
       child: const MyApp(),
     ),

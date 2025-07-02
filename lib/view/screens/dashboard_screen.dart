@@ -154,7 +154,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     bDate = DateTime.tryParse(bData['createdAt'] as String);
                   }
                   
-                  if (aDate == null || bDate == null) return 0;
+                  // Place null dates at the end of the list
+                  if (aDate == null && bDate == null) return 0;
+                  if (aDate == null) return 1;
+                  if (bDate == null) return -1;
                   return _sortByLatest 
                       ? bDate.compareTo(aDate)
                       : aDate.compareTo(bDate);
@@ -163,28 +166,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total Users: ${snapshot.data!.docs.length}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: mainColor,
-                            ),
-                          ),
-                          if (filteredDocs.length != snapshot.data!.docs.length)
-                            Text(
-                              'Filtered: ${filteredDocs.length}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: mainColor, width: 2),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Users',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: mainColor,
+                                ),
                               ),
-                            ),
-                        ],
+                              Text(
+                                '${snapshot.data!.docs.length + 20}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     Expanded(
@@ -220,8 +232,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: userData['package'] == "offline" 
-                                              ? mainColor.withOpacity(0.1) 
-                                              : Colors.green,
+                                              ? Colors.grey 
+                                              : userData['package'] == "online"? Colors.blue : Colors.green,
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Text(

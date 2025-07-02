@@ -16,7 +16,7 @@ class SellInfo extends StatelessWidget {
         Text("${AppLocalizations.of(context)!.size}: ${sell.size?.name}"),
         Text("${AppLocalizations.of(context)!.quantity}: ${sell.quantity}"),
         Text("${AppLocalizations.of(context)!.place}: ${sell.getPlace()}"),
-        Text("${AppLocalizations.of(context)!.originalPrice}: ${sell.product?.price}"),
+        Text("${AppLocalizations.of(context)!.costPrice}: ${sell.product?.price}"),
         Text("${AppLocalizations.of(context)!.soldFor}: ${sell.priceOfSell}"),
         Text("${AppLocalizations.of(context)!.date}: ${sell.date.toString().split(".").first}"),
         Text("${AppLocalizations.of(context)!.sideExpensesCost}: ${sell.extraExpenses}"),

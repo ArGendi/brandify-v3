@@ -1,9 +1,12 @@
 import 'dart:io';
 
 import 'package:brandify/main.dart';
+import 'package:brandify/models/firebase/firestore/shopify_services.dart';
 import 'package:brandify/models/package.dart';
+import 'package:brandify/view/widgets/custom_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:brandify/constants.dart';
 import 'package:brandify/cubits/all_sells/all_sells_cubit.dart';
@@ -13,6 +16,7 @@ import 'package:brandify/models/product.dart';
 import 'package:brandify/models/sell.dart';
 import 'package:brandify/view/widgets/sell_info.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OneProductSellsScreen extends StatefulWidget {
   final Product product;
@@ -196,13 +200,43 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                           child: Text(
                             DateFormat('yyyy-MM-dd').format(sells[i].date!),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 10,
                             ),
                           ),
                         ),
                         SizedBox(
                           width: 10,
                         ),
+                        if(sells[i].shopifyId != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(width: 10),
+                            Text(
+                              "( ",
+                              style: TextStyle(
+                                fontSize: 12
+                              ),
+                            ),
+                            FaIcon(FontAwesomeIcons.shopify, size: 15, color: Colors.green,),
+                            if(sells[i].status != null)
+                            SizedBox(width: 5),
+                            if(sells[i].status != null)
+                            Text(
+                              getLocalizedShopifyStatus(context, sells[i].status),
+                              style: TextStyle(
+                                fontSize: 12
+                              ),
+                            ),
+                            Text(
+                              " )",
+                              style: TextStyle(
+                                fontSize: 12
+                              ),
+                            ),
+                          ],
+                        ),
+                      SizedBox(width: 10),
                         !sells[i].isRefunded
                             ? Text(
                                 sells[i].profit >= 0
@@ -232,6 +266,28 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
         ),
       ),
     );
+  }
+
+  String getLocalizedShopifyStatus(BuildContext context, String? status) {
+    final localizations = AppLocalizations.of(context)!;
+    switch (status) {
+      case 'pending':
+        return localizations.shopifyStatus_pending;
+      case 'authorized':
+        return localizations.shopifyStatus_authorized;
+      case 'partially_paid':
+        return localizations.shopifyStatus_partially_paid;
+      case 'paid':
+        return localizations.shopifyStatus_paid;
+      case 'partially_refunded':
+        return localizations.shopifyStatus_partially_refunded;
+      case 'refunded':
+        return localizations.shopifyStatus_refunded;
+      case 'voided':
+        return localizations.shopifyStatus_voided;
+      default:
+        return status ?? '';
+    }
   }
 
   void showFilterBottomSheet(BuildContext context) {
@@ -353,7 +409,7 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
           ),
           Center(
             child: Text(
-              "Sell Information",
+              AppLocalizations.of(context)!.sellInformation,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -364,6 +420,12 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
           SellInfo(sell: sell),
           SizedBox(height: 20),
           if (!sell.isRefunded)
+          sell.shopifyId != null? CustomButton(
+                text: AppLocalizations.of(context)!.refundInShopify,
+                onPressed: () {
+                  _openShopifyOrder(context, sell.shopifyId!);
+                },
+              ):
             BlocBuilder<AllSellsCubit, AllSellsState>(
               builder: (context, state) {
                 if (state is LoadingRefundSellsState) {
@@ -371,39 +433,64 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                     child: CircularProgressIndicator(color: Colors.red),
                   );
                 }
-                return ElevatedButton(
+                return CustomButton(
+                  bgColor: Colors.red,
                   onPressed: () async{
                     await AllSellsCubit.get(context).refund(context, sell);
                     navigatorKey.currentState?..pop()..pop();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 45),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text("Refund"),
+                  text: AppLocalizations.of(context)!.refund,
                 );
               },
             ),
           SizedBox(height: 10),
-          ElevatedButton(
+          CustomButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: mainColor,
-              foregroundColor: Colors.white,
-              minimumSize: Size(double.infinity, 45),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text("Close"),
+            text: AppLocalizations.of(context)!.close,
+            bgColor: Colors.grey.shade600,
           ),
         ],
       ),
     ));
+  }
+
+  Future<void> _openShopifyOrder(BuildContext context, int orderId) async {
+    try {
+      // Get the store ID from ShopifyServices
+      final storeId = ShopifyServices.storeId;
+      if (storeId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Shopify store not configured'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Construct the Shopify admin URL for the order
+      final url = "https://admin.shopify.com/store/$storeId/orders/$orderId";
+      
+      // Launch the URL
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Shopify order'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening Shopify order: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

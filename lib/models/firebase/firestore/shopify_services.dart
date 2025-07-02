@@ -5,12 +5,13 @@ import 'package:shopify_flutter/shopify_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:brandify/models/local/cache.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:brandify/models/product.dart' as p;
 
 class ShopifyServices {
   static String? adminAPIAcessToken;
-  static String? storeFrontAPIAcessToken;
-  static int? locationId;
+  //static String? storeFrontAPIAcessToken;
+  static String? locationId;
   static String? storeId;
   // static String? apiKey;
   // static String? apiSecretKey;
@@ -19,13 +20,11 @@ class ShopifyServices {
   static void setParamters(
     {
       String? newAdminAcessToken,
-      String? newStoreFrontAcessToken,
       String? newStoreId,
-      int? newLocationId
+      String? newLocationId
     }
   ){
     adminAPIAcessToken = newAdminAcessToken;
-    storeFrontAPIAcessToken = newStoreFrontAcessToken;
     storeId = newStoreId;
     locationId = newLocationId;
   }
@@ -155,8 +154,8 @@ String? _extractNextPageToken(String linkHeader) {
 
   Future<List<dynamic>> getOrders() async {
     try {
-      final response = await http.get(
-        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders.json?status=completed'),
+      final response = await http.get( 
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders.json'), // ?status=completed
         headers: {
           'X-Shopify-Access-Token': adminAPIAcessToken!,
           'Content-Type': 'application/json',
@@ -371,7 +370,496 @@ String? _extractNextPageToken(String linkHeader) {
         return false;
       }
     }
+
+  /// Refund a Shopify order using their API
+  Future<bool> refundOrder(int orderId, {double? refundAmount, String? reason}) async {
+    try {
+      debugPrint('Processing refund for Shopify order: $orderId');
+      
+      // Get order details first
+      final orderResponse = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (orderResponse.statusCode != 200) {
+        debugPrint('Failed to get order details: ${orderResponse.statusCode} - ${orderResponse.body}');
+        return false;
+      }
+
+      final orderData = json.decode(orderResponse.body)['order'];
+      debugPrint('Order financial status: ${orderData['financial_status']}');
+      
+      // Check if order is already refunded
+      if (orderData['financial_status'] == 'refunded' || 
+          orderData['financial_status'] == 'partially_refunded') {
+        debugPrint('Order is already refunded or partially refunded');
+        return false;
+      }
+      
+      // Check if order is paid
+      if (orderData['financial_status'] != 'paid') {
+        debugPrint('Order is not paid, cannot refund. Status: ${orderData['financial_status']}');
+        return false;
+      }
+
+      final lineItems = orderData['line_items'] as List? ?? [];
+      if (lineItems.isEmpty) {
+        debugPrint('No line items found in order');
+        return false;
+      }
+
+      final totalAmount = double.parse(orderData['total_price'] ?? '0');
+      final refundAmountToUse = refundAmount ?? totalAmount;
+
+      debugPrint('Creating refund for order $orderId, amount: $refundAmountToUse');
+
+      // Create a simple refund without complex transaction handling
+      final refundPayload = {
+        'refund': {
+          'shipping': {
+            'full_refund': true
+          },
+          'refund_line_items': lineItems.map<Map<String, dynamic>>((item) => {
+            'id': item['id'],
+            'quantity': item['quantity'],
+            'restock_type': 'return'
+          }).toList(),
+          'note': reason ?? 'Refund processed via API'
+        }
+      };
+
+      debugPrint('Refund payload: ${json.encode(refundPayload)}');
+
+      // Create the refund
+      final refundResponse = await http.post(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId/refunds.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(refundPayload),
+      ).timeout(const Duration(seconds: 60));
+
+      debugPrint('Refund response status: ${refundResponse.statusCode}');
+      debugPrint('Refund response body: ${refundResponse.body}');
+
+      if (refundResponse.statusCode == 201) {
+        final refundData = json.decode(refundResponse.body);
+        debugPrint('Refund created successfully: ${refundData['refund']['id']}');
+        
+        // Verify the refund was processed by checking order status again
+        await Future.delayed(const Duration(seconds: 2));
+        final verifyResponse = await http.get(
+          Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+          headers: {
+            'X-Shopify-Access-Token': adminAPIAcessToken!,
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 15));
+        
+        if (verifyResponse.statusCode == 200) {
+          final updatedOrderData = json.decode(verifyResponse.body)['order'];
+          debugPrint('Order status after refund: ${updatedOrderData['financial_status']}');
+          
+          if (updatedOrderData['financial_status'] == 'refunded' || 
+              updatedOrderData['financial_status'] == 'partially_refunded') {
+            debugPrint('Refund verification successful');
+            return true;
+          } else {
+            debugPrint('Refund verification failed - order still shows as paid');
+            return false;
+          }
+        }
+        
+        return true;
+      } else {
+        debugPrint('Failed to create refund: ${refundResponse.statusCode} - ${refundResponse.body}');
+        return false;
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        debugPrint('Timeout error processing Shopify refund: $e');
+      } else {
+        debugPrint('Error processing Shopify refund: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Get refunds for a specific order
+  Future<List<Map<String, dynamic>>> getOrderRefunds(int orderId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId/refunds.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['refunds'] ?? []);
+      } else {
+        debugPrint('Failed to get refunds: ${response.statusCode} - ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        debugPrint('Timeout error getting order refunds: $e');
+      } else {
+        debugPrint('Error getting order refunds: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Check if an order can be refunded
+  Future<bool> canRefundOrder(int orderId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final orderData = json.decode(response.body)['order'];
+        final financialStatus = orderData['financial_status'];
+        final fulfillmentStatus = orderData['fulfillment_status'];
+        
+        debugPrint('Order $orderId - Financial status: $financialStatus, Fulfillment status: $fulfillmentStatus');
+        
+        // Order can be refunded if it's paid and not already refunded
+        return financialStatus == 'paid' && 
+               financialStatus != 'refunded' && 
+               financialStatus != 'partially_refunded';
+      } else {
+        debugPrint('Failed to check refund status: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        debugPrint('Timeout error checking if order can be refunded: $e');
+      } else {
+        debugPrint('Error checking if order can be refunded: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Get order details including financial status
+  Future<Map<String, dynamic>?> getOrderDetails(int orderId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body)['order'];
+      } else {
+        debugPrint('Failed to get order details: ${response.statusCode} - ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      if (e is TimeoutException) {
+        debugPrint('Timeout error getting order details: $e');
+      } else {
+        debugPrint('Error getting order details: $e');
+      }
+      return null;
+    }
+  }
    
-   
+  /// Test function to debug order refund process
+  Future<Map<String, dynamic>> debugOrderRefund(int orderId) async {
+    try {
+      debugPrint('Debugging order $orderId for refund...');
+      
+      final orderDetails = await getOrderDetails(orderId);
+      if (orderDetails == null) {
+        return {'error': 'Could not fetch order details'};
+      }
+      
+      final canRefund = await canRefundOrder(orderId);
+      final existingRefunds = await getOrderRefunds(orderId);
+      
+      return {
+        'order_id': orderId,
+        'financial_status': orderDetails['financial_status'],
+        'fulfillment_status': orderDetails['fulfillment_status'],
+        'total_price': orderDetails['total_price'],
+        'can_refund': canRefund,
+        'existing_refunds_count': existingRefunds.length,
+        'transactions_count': (orderDetails['transactions'] as List?)?.length ?? 0,
+        'line_items_count': (orderDetails['line_items'] as List?)?.length ?? 0,
+      };
+    } catch (e) {
+      return {'error': 'Debug failed: $e'};
+    }
+  }
+
+  /// Test refund process without actually creating a refund
+  Future<Map<String, dynamic>> testRefundProcess(int orderId) async {
+    try {
+      debugPrint('Testing refund process for order: $orderId');
+      
+      // Get order details
+      final orderDetails = await getOrderDetails(orderId);
+      if (orderDetails == null) {
+        return {
+          'success': false,
+          'error': 'Could not fetch order details',
+          'order_id': orderId
+        };
+      }
+      
+      final financialStatus = orderDetails['financial_status'];
+      final fulfillmentStatus = orderDetails['fulfillment_status'];
+      final totalPrice = orderDetails['total_price'];
+      final lineItems = orderDetails['line_items'] as List? ?? [];
+      final transactions = orderDetails['transactions'] as List? ?? [];
+      
+      debugPrint('Order analysis:');
+      debugPrint('- Financial status: $financialStatus');
+      debugPrint('- Fulfillment status: $fulfillmentStatus');
+      debugPrint('- Total price: $totalPrice');
+      debugPrint('- Line items count: ${lineItems.length}');
+      debugPrint('- Transactions count: ${transactions.length}');
+      
+      // Check if order can be refunded
+      bool canRefund = false;
+      String refundReason = '';
+      
+      if (financialStatus == 'refunded' || financialStatus == 'partially_refunded') {
+        refundReason = 'Order is already refunded';
+      } else if (financialStatus != 'paid') {
+        refundReason = 'Order is not paid (status: $financialStatus)';
+      } else if (lineItems.isEmpty) {
+        refundReason = 'No line items found in order';
+      } else {
+        canRefund = true;
+        refundReason = 'Order can be refunded';
+      }
+      
+      // Analyze transactions
+      List<Map<String, dynamic>> successfulTransactions = [];
+      for (final transaction in transactions) {
+        if (transaction['status'] == 'success' && transaction['kind'] == 'sale') {
+          successfulTransactions.add({
+            'id': transaction['id'],
+            'amount': transaction['amount'],
+            'gateway': transaction['gateway'],
+            'created_at': transaction['created_at'],
+          });
+        }
+      }
+      
+      return {
+        'success': canRefund,
+        'order_id': orderId,
+        'financial_status': financialStatus,
+        'fulfillment_status': fulfillmentStatus,
+        'total_price': totalPrice,
+        'line_items_count': lineItems.length,
+        'transactions_count': transactions.length,
+        'successful_transactions': successfulTransactions,
+        'can_refund': canRefund,
+        'refund_reason': refundReason,
+        'message': canRefund ? 'Order is ready for refund' : 'Order cannot be refunded: $refundReason'
+      };
+      
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Test failed: $e',
+        'order_id': orderId
+      };
+    }
+  }
+
+  /// Manual refund function with detailed logging for debugging
+  Future<Map<String, dynamic>> manualRefundOrder(int orderId, {String? reason}) async {
+    try {
+      debugPrint('=== MANUAL REFUND PROCESS START ===');
+      debugPrint('Order ID: $orderId');
+      debugPrint('Reason: $reason');
+      
+      // Step 1: Get order details
+      debugPrint('Step 1: Getting order details...');
+      final orderResponse = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (orderResponse.statusCode != 200) {
+        return {
+          'success': false,
+          'error': 'Failed to get order details: ${orderResponse.statusCode}',
+          'response_body': orderResponse.body
+        };
+      }
+
+      final orderData = json.decode(orderResponse.body)['order'];
+      debugPrint('Order financial status: ${orderData['financial_status']}');
+      debugPrint('Order fulfillment status: ${orderData['fulfillment_status']}');
+      debugPrint('Order total price: ${orderData['total_price']}');
+      
+      // Step 2: Validate order can be refunded
+      debugPrint('Step 2: Validating order can be refunded...');
+      if (orderData['financial_status'] != 'paid') {
+        return {
+          'success': false,
+          'error': 'Order is not paid. Current status: ${orderData['financial_status']}'
+        };
+      }
+      
+      final lineItems = orderData['line_items'] as List? ?? [];
+      debugPrint('Line items count: ${lineItems.length}');
+      
+      if (lineItems.isEmpty) {
+        return {
+          'success': false,
+          'error': 'No line items found in order'
+        };
+      }
+      
+      // Step 3: Prepare refund payload
+      debugPrint('Step 3: Preparing refund payload...');
+      final refundPayload = {
+        'refund': {
+          'shipping': {
+            'full_refund': true
+          },
+          'refund_line_items': lineItems.map<Map<String, dynamic>>((item) => {
+            'id': item['id'],
+            'quantity': item['quantity'],
+            'restock_type': 'return'
+          }).toList(),
+          'note': reason ?? 'Manual refund via API'
+        }
+      };
+      
+      debugPrint('Refund payload: ${json.encode(refundPayload)}');
+      
+      // Step 4: Create refund
+      debugPrint('Step 4: Creating refund...');
+      final refundResponse = await http.post(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId/refunds.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(refundPayload),
+      ).timeout(const Duration(seconds: 60));
+      
+      debugPrint('Refund response status: ${refundResponse.statusCode}');
+      debugPrint('Refund response body: ${refundResponse.body}');
+      
+      if (refundResponse.statusCode != 201) {
+        return {
+          'success': false,
+          'error': 'Failed to create refund: ${refundResponse.statusCode}',
+          'response_body': refundResponse.body
+        };
+      }
+      
+      final refundData = json.decode(refundResponse.body);
+      debugPrint('Refund created with ID: ${refundData['refund']['id']}');
+      
+      // Step 5: Verify refund
+      debugPrint('Step 5: Verifying refund...');
+      await Future.delayed(const Duration(seconds: 3));
+      
+      final verifyResponse = await http.get(
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders/$orderId.json'),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+      
+      if (verifyResponse.statusCode == 200) {
+        final updatedOrderData = json.decode(verifyResponse.body)['order'];
+        final newStatus = updatedOrderData['financial_status'];
+        debugPrint('Order status after refund: $newStatus');
+        
+        return {
+          'success': true,
+          'refund_id': refundData['refund']['id'],
+          'order_status_before': orderData['financial_status'],
+          'order_status_after': newStatus,
+          'message': 'Refund processed successfully'
+        };
+      } else {
+        return {
+          'success': true,
+          'refund_id': refundData['refund']['id'],
+          'warning': 'Refund created but could not verify order status',
+          'verification_error': '${verifyResponse.statusCode}: ${verifyResponse.body}'
+        };
+      }
+      
+    } catch (e) {
+      debugPrint('=== MANUAL REFUND PROCESS ERROR ===');
+      debugPrint('Error: $e');
+      return {
+        'success': false,
+        'error': 'Manual refund failed: $e'
+      };
+    }
+  }
+
+  /// Simple test function to debug refund on a specific order
+  Future<Map<String, dynamic>> testRefundOnOrder(int orderId) async {
+    try {
+      debugPrint('=== TESTING REFUND ON ORDER $orderId ===');
+      
+      // Step 1: Test the order
+      final testResult = await testRefundProcess(orderId);
+      debugPrint('Test result: $testResult');
+      
+      if (testResult['success'] == false) {
+        return {
+          'success': false,
+          'error': testResult['error'] ?? 'Test failed',
+          'test_result': testResult
+        };
+      }
+      
+      // Step 2: Try manual refund
+      debugPrint('Attempting manual refund...');
+      final refundResult = await manualRefundOrder(orderId, reason: 'Test refund');
+      debugPrint('Refund result: $refundResult');
+      
+      return {
+        'success': refundResult['success'],
+        'test_result': testResult,
+        'refund_result': refundResult,
+        'message': refundResult['success'] == true 
+          ? 'Refund test successful' 
+          : 'Refund test failed: ${refundResult['error']}'
+      };
+      
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Test refund failed: $e'
+      };
+    }
+  }
 }
 

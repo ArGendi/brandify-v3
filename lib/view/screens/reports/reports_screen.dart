@@ -77,7 +77,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 child: BlocBuilder<ReportsCubit, ReportsState>(
                   builder: (context, state) {
-                    if(state is ReportsInitial){
+                    if(ReportsCubit.get(context).isLoading){
                       return Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Center(
@@ -115,7 +115,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 AppLocalizations.of(context)!.today,
                                 ReportsCubit.get(context).today?.totalProfit ??
                                     0,
-                                Color(0xFF93B0A2), // Darker variant
+                                mainColor, //Color(0xFF93B0A2), // Darker variant
                                 () => _navigateToReport(
                                     context, ReportsCubit.get(context).today, 
                                     AppLocalizations.of(context)!.today,),
@@ -128,7 +128,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 AppLocalizations.of(context)!.sevenDays,
                                 ReportsCubit.get(context).week?.totalProfit ??
                                     0,
-                                Color(0xFF7D9889), // Even darker
+                                mainColor,//Color(0xFF7D9889), // Even darker
                                 () => _navigateToReport(
                                     context, ReportsCubit.get(context).week,
                                     AppLocalizations.of(context)!.thisWeek,),
@@ -145,7 +145,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 AppLocalizations.of(context)!.thisMonth,
                                 ReportsCubit.get(context).month?.totalProfit ??
                                     0,
-                                Color(0xFF678073), // More darker
+                                mainColor,//Color(0xFF678073), // More darker
                                 () => _navigateToReport(
                                     context, ReportsCubit.get(context).month,
                                     AppLocalizations.of(context)!.thisMonth,),
@@ -160,7 +160,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         .threeMonths
                                         ?.totalProfit ??
                                     0,
-                                Color(0xFF51685D), // Darkest variant
+                                mainColor,//Color(0xFF51685D), // Darkest variant
                                 () => _navigateToReport(context,
                                     ReportsCubit.get(context).threeMonths,
                                     AppLocalizations.of(context)!.threeMonths,),

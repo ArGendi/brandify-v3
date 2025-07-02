@@ -1,6 +1,8 @@
 import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
+import 'package:brandify/enum.dart';
+import 'package:brandify/models/package.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
@@ -22,9 +24,15 @@ class ReportsCubit extends Cubit<ReportsState> {
    DateTime? fromDate;
    DateTime? toDate;
    Report? currentReport;
+   bool isLoading = false;
 
   ReportsCubit() : super(ReportsInitial());
   static ReportsCubit get(BuildContext context) => BlocProvider.of(context);
+
+  void setIsLoading(bool value){
+    isLoading = value;
+    emit(GetReportState());
+  }
 
   void setTodayReport(List<Sell> sells, List<Ad> ads, List<ExtraExpense> extraExpenses){
 
@@ -40,6 +48,9 @@ class ReportsCubit extends Cubit<ReportsState> {
 
     for(var sell in unRefundedSells){
       if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
         totalIncome += sell.priceOfSell!;
         totalProfit += sell.profit;
         totalNumberOfSells += sell.quantity ?? 0;
@@ -81,6 +92,9 @@ class ReportsCubit extends Cubit<ReportsState> {
 
     for(var sell in weekSells){
       if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
         totalIncome += sell.priceOfSell!;
         totalProfit += sell.profit;
         totalNumberOfSells += sell.quantity ?? 0;
@@ -122,6 +136,9 @@ class ReportsCubit extends Cubit<ReportsState> {
 
     for(var sell in monthSells){
       if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
         totalIncome += sell.priceOfSell!;
         totalProfit += sell.profit;
         totalNumberOfSells += sell.quantity ?? 0;
@@ -163,6 +180,9 @@ class ReportsCubit extends Cubit<ReportsState> {
     
     for(var sell in threeMonthsells){
       if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
         totalIncome += sell.priceOfSell!;
         totalProfit += sell.profit;
         totalNumberOfSells += sell.quantity ?? 0;
@@ -204,6 +224,9 @@ class ReportsCubit extends Cubit<ReportsState> {
 
     for(var sell in temp){
       if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
         totalIncome += sell.priceOfSell!;
         totalProfit += sell.profit;
         totalNumberOfSells += sell.quantity ?? 0;

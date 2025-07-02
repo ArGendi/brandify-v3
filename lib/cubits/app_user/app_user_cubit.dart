@@ -31,6 +31,7 @@ class AppUserCubit extends Cubit<AppUserState> {
   int totalOrders = 0; 
   String? brandName;
   String? brandPhone;
+  String? email;
   bool isLoggedInNow = false;
   DateTime? createdAt;
 
@@ -69,6 +70,7 @@ class AppUserCubit extends Cubit<AppUserState> {
           if (userData != null) {
             print("user dataaaaaa : $userData");
             brandName = userData['brandName'];
+            email = userData['email'];
             brandPhone = userData['brandPhone'];
             totalOrders = userData['totalOrders'] ?? 0;
             totalProfit = userData['totalProfit'] ?? 0;
@@ -76,7 +78,7 @@ class AppUserCubit extends Cubit<AppUserState> {
             // Set Shopify parameters if they exist
             ShopifyServices.setParamters(
               newAdminAcessToken: userData['adminAPIAcessToken'],
-              newStoreFrontAcessToken: userData['storeFrontAPIAcessToken'],
+              //newStoreFrontAcessToken: userData['storeFrontAPIAcessToken'],
               newStoreId: userData['storeId'],
               newLocationId: userData['locationId'],
             );
@@ -86,6 +88,7 @@ class AppUserCubit extends Cubit<AppUserState> {
             if(Package.type == PackageType.offline){
               brandName = Cache.getName();
               brandPhone = Cache.getPhone();
+              email = Cache.getEmail();
               totalOrders = Cache.getTotalOrders() ?? 0;
               totalProfit = Cache.getTotalProfit() ?? 0;
               total = Cache.getTotal() ?? 0;
@@ -115,6 +118,7 @@ class AppUserCubit extends Cubit<AppUserState> {
         }, 
         offline: () async{
           brandName = Cache.getName();
+          email = Cache.getEmail();
           brandPhone = Cache.getPhone();
           totalOrders = Cache.getTotalOrders() ?? 0;
           totalProfit = Cache.getTotalProfit() ?? 0;
@@ -128,6 +132,7 @@ class AppUserCubit extends Cubit<AppUserState> {
           if (userData != null) {
             print("user dataaaaaa : $userData");
             brandName = userData['brandName'];
+            email = userData['email'];
             brandPhone = userData['brandPhone'];
             totalOrders = userData['totalOrders'] ?? 0;
             totalProfit = userData['totalProfit'] ?? 0;
@@ -135,7 +140,7 @@ class AppUserCubit extends Cubit<AppUserState> {
             // Set Shopify parameters if they exist
             ShopifyServices.setParamters(
               newAdminAcessToken: userData['adminAPIAcessToken'],
-              newStoreFrontAcessToken: userData['storeFrontAPIAcessToken'],
+              //newStoreFrontAcessToken: userData['storeFrontAPIAcessToken'],
               newStoreId: userData['storeId'],
               newLocationId: userData['locationId'],
             );
@@ -441,6 +446,7 @@ class AppUserCubit extends Cubit<AppUserState> {
         
         brandName = userData['brandName'];
         brandPhone = userData['brandPhone'];
+        email = userData['email'];
         totalOrders = userData['totalOrders'] ?? 0;
         totalProfit = userData['totalProfit'] ?? 0;
         total = userData['total'] ?? 0;
@@ -450,6 +456,7 @@ class AppUserCubit extends Cubit<AppUserState> {
         // Save to cache
         await Cache.setName(brandName ?? '');
         await Cache.setPhone(brandPhone ?? '');
+        await Cache.setEmail(email ?? '');
         await Cache.setTotalOrders(totalOrders);
         await Cache.setTotalProfit(totalProfit);
         await Cache.setTotal(total);
@@ -519,51 +526,92 @@ class AppUserCubit extends Cubit<AppUserState> {
           totalOrders = ordersCount;
           brandName = Cache.getName();
           brandPhone = Cache.getPhone();
+          email = Cache.getEmail();
           
           // Save to cache
           await Cache.setTotal(total);
           await Cache.setTotalProfit(totalProfit);
           await Cache.setTotalOrders(totalOrders);
         }
-        
-        emit(AppUserLoaded());
+
+        if(Package.type == PackageType.shopify){
+          emit(AppUserDataValuesLoading());
+        }
+        else{
+          emit(AppUserLoaded());
+        }
+
       } catch (e) {
         emit(AppUserError(e.toString()));
       }
     }
     else{
-      var packageType = Cache.getPackageType();
-      print("packageType : $packageType");
-      Package.getTypeFromString(packageType ?? PACKAGE_TYPE_ONLINE);
-      if (Package.type == PackageType.online || Package.type == PackageType.shopify) {
-        var userData = await FirestoreServices().getUserData();
-        if (userData != null) {
-          print("user dataaaaaa : $userData");
-          brandName = userData['brandName'];
-          brandPhone = userData['brandPhone'];
-          totalOrders = userData['totalOrders'] ?? 0;
-          totalProfit = userData['totalProfit'] ?? 0;
-          total = userData['total'] ?? 0;
-          createdAt = userData['createdAt'] != null ? 
-            DateTime.parse(userData['createdAt']) : null;
-          emit(AppUserLoaded());
-        } else {
-          emit(AppUserError('Could not get user data'));
+      var userData = await FirestoreServices().getUserData();
+      if (userData != null) {
+        print("user dataaaaaa : $userData");
+        Package.getTypeFromString(userData['package'] ?? PACKAGE_TYPE_ONLINE);
+        brandName = userData['brandName'];
+        brandPhone = userData['brandPhone'];
+        email = userData['email'];
+        totalOrders = userData['totalOrders'] ?? 0;
+        totalProfit = userData['totalProfit'] ?? 0;
+        total = userData['total'] ?? 0;
+        createdAt = userData['createdAt'] != null ? 
+          DateTime.parse(userData['createdAt']) : null;
+        if(Package.type == PackageType.shopify){
+          ShopifyServices.setParamters(
+            newAdminAcessToken: userData["adminAPIAcessToken"],
+            newStoreId: userData["storeId"],
+            newLocationId: userData["locationId"],
+          );
         }
-      } else {
-        // Offline mode - get from cache
-        brandName = Cache.getName();
-        brandPhone = Cache.getPhone();
-        totalOrders = Cache.getTotalOrders() ?? 0;
-        totalProfit = Cache.getTotalProfit() ?? 0;
-        total = Cache.getTotal() ?? 0;
-
-        await HiveServices.openUserBoxes();
+        else if(Package.type == PackageType.offline){
+          await HiveServices.openUserBoxes();
+        }
+        // If it's shopify, it should load until read the values from sells cubit
+        if(Package.type == PackageType.shopify){
+          emit(AppUserDataValuesLoading());
+        }
+        else{
+          emit(AppUserLoaded());
+        }
         
-        emit(AppUserLoaded());
+      } else {
+        var packageType = Cache.getPackageType();
+        print("packageType : $packageType");
+        Package.getTypeFromString(packageType ?? PACKAGE_TYPE_ONLINE);
+        if(Package.type == PackageType.offline){
+          // Offline mode - get from cache
+          brandName = Cache.getName();
+          brandPhone = Cache.getPhone();
+          email = Cache.getEmail();
+          totalOrders = Cache.getTotalOrders() ?? 0;
+          totalProfit = Cache.getTotalProfit() ?? 0;
+          total = Cache.getTotal() ?? 0;
+
+          await HiveServices.openUserBoxes();
+          
+          emit(AppUserLoaded());
+        }
+        else{
+          emit(AppUserError('Could not get user data'));
+          await logout(navigatorKey.currentContext!);
+        }
       }
     }
-    
+  }
+
+  void setTotalAndProfit(int newTotal, int newProfit, [int? newTotalOrders]){
+    total = newTotal;
+    totalProfit = newProfit;
+    totalOrders = newTotalOrders ?? 0;
+    emit(AppUserLoaded());
+  }
+
+  Future<void> changePassword(String newPassword) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No user logged in');
+    await user.updatePassword(newPassword);
   }
 }
 

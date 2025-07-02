@@ -25,7 +25,7 @@ class _SpecificAdsScreenState extends State<SpecificAdsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Ads"),
+        title: Text(AppLocalizations.of(context)!.advertising),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -60,7 +60,7 @@ class _SpecificAdsScreenState extends State<SpecificAdsScreen> {
                           ad: widget.ads[i],
                           color: AdsCubit.get(context).getAdColor(widget.ads[i]),
                           icon: AdsCubit.get(context).getAdIcon(widget.ads[i]),
-                          onTap: showDetailsAlertDialog,
+                          onTap: context.read<AdsCubit>().showEnhancedAdDetails,
                         );
                       },
                       separatorBuilder: (context, i) => SizedBox(

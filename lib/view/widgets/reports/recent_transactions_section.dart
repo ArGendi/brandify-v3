@@ -184,6 +184,7 @@ class RecentTransactionsSection extends StatelessWidget {
       },
     );
   }
+  
 
   Widget _buildRecentAds(BuildContext context, dynamic current) {
     return BlocBuilder<AdsCubit, AdsState>(
@@ -196,7 +197,9 @@ class RecentTransactionsSection extends StatelessWidget {
             ad: recentAds[i],
             color: AdsCubit.get(context).getAdColor(recentAds[i]),
             icon: AdsCubit.get(context).getAdIcon(recentAds[i]),
-            onTap: (_, __) {},
+            onTap: (_, __) {
+              context.read<AdsCubit>().showEnhancedAdDetails(context, recentAds[i]);
+            },
             showBackground: false,
           ),
           separatorBuilder: (_, __) => SizedBox(height: 10),
@@ -215,7 +218,9 @@ class RecentTransactionsSection extends StatelessWidget {
           physics: NeverScrollableScrollPhysics(),
           itemBuilder: (context, i) => ExpenseItem(
             expense: recentExpenses[i],
-            onTap: (context, expense) => showExpenseDetails(context, expense),
+            onTap: (context, expense){
+              context.read<ExtraExpensesCubit>().showExpenseDetails(context, expense, i);
+            },
             isNoraml: false,
           ),
           separatorBuilder: (_, __) => SizedBox(height: 10),

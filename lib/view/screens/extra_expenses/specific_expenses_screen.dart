@@ -1,6 +1,8 @@
+import 'package:brandify/cubits/extra_expenses/extra_expenses_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:brandify/models/extra_expense.dart';
 import 'package:brandify/view/widgets/expense_item.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SpecificExpensesScreen extends StatefulWidget {
   final List<ExtraExpense> expenses;
@@ -33,7 +35,7 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Extra Expenses'),
+        title: Text(AppLocalizations.of(context)!.extraExpenses),
         actions: [
           IconButton(
             icon: Icon(Icons.sort),
@@ -50,7 +52,7 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Sort By',
+                        AppLocalizations.of(context)!.sortBy,
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -59,7 +61,7 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
                       SizedBox(height: 20),
                       ListTile(
                         leading: Icon(Icons.arrow_upward),
-                        title: Text('Highest Price'),
+                        title: Text(AppLocalizations.of(context)!.highestPrice),
                         onTap: () {
                           setState(() {
                             filteredExpenses.sort((a, b) => (b.price ?? 0).compareTo(a.price ?? 0));
@@ -69,7 +71,7 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
                       ),
                       ListTile(
                         leading: Icon(Icons.arrow_downward),
-                        title: Text('Lowest Price'),
+                        title: Text(AppLocalizations.of(context)!.lowestPrice),
                         onTap: () {
                           setState(() {
                             filteredExpenses.sort((a, b) => (a.price ?? 0).compareTo(b.price ?? 0));
@@ -99,14 +101,14 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total Expenses',
+                    AppLocalizations.of(context)!.totalExpenses,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '${calculateTotalExpenses().toStringAsFixed(2)} LE',
+                    '${AppLocalizations.of(context)!.currency(calculateTotalExpenses().toStringAsFixed(2))}',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -121,7 +123,9 @@ class _SpecificExpensesScreenState extends State<SpecificExpensesScreen> {
               child: ListView.separated(
                 itemBuilder: (context, i) => ExpenseItem(
                   expense: filteredExpenses[i],
-                  onTap: (_, __) {},
+                  onTap: (_, __) {
+                    ExtraExpensesCubit.get(context).showExpenseDetails(context, filteredExpenses[i], i);
+                  },
                 ),
                 separatorBuilder: (_, __) => SizedBox(height: 15),
                 itemCount: filteredExpenses.length,

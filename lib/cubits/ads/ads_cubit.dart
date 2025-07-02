@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:brandify/main.dart';
 import 'package:brandify/models/local/hive_services.dart';
+import 'package:brandify/view/widgets/detail_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -293,5 +294,80 @@ class AdsCubit extends Cubit<AdsState> {
     ads = [];
     filteredAds = [];
     emit(AdsInitial());
+  }
+
+  void showEnhancedAdDetails(BuildContext context, Ad ad) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              AppLocalizations.of(context)!.advertisementDetails,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: mainColor,
+              ),
+            ),
+            SizedBox(height: 20),
+            DetailRow(
+              icon: Icons.campaign,
+              label: AppLocalizations.of(context)!.platform,
+              value: ad.platform?.name ?? AppLocalizations.of(context)!.notAvailable,
+            ),
+            DetailRow(
+              icon: Icons.attach_money,
+              label: AppLocalizations.of(context)!.cost,
+              value: "${AppLocalizations.of(context)!.currency(ad.cost ?? 0)}",
+            ),
+            DetailRow(
+              icon: Icons.calendar_today,
+              label: AppLocalizations.of(context)!.date,
+              value: ad.date.toString().split(" ").first,
+            ),
+            if(ad.description != null) 
+              DetailRow(
+                icon: Icons.description,
+                label: AppLocalizations.of(context)!.descriptionLabel,
+                value: ad.description ?? "",
+              ),
+            SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(AppLocalizations.of(context)!.close, style: TextStyle(fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

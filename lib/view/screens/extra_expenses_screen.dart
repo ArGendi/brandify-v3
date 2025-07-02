@@ -15,6 +15,7 @@ import 'package:brandify/view/widgets/custom_button.dart';
 import 'package:brandify/view/widgets/custom_texfield.dart';
 import 'package:brandify/view/widgets/expense_item.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:brandify/view/widgets/detail_row.dart';
 
 class ExtraExpensesScreen extends StatefulWidget {
   const ExtraExpensesScreen({super.key});
@@ -222,39 +223,91 @@ class _ExtraExpensesScreenState extends State<ExtraExpensesScreen> {
   }
 
   void showExpenseDetails(BuildContext context, ExtraExpense expense, int index) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(expense.name.toString()),
-        content: Column(
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Amount: ${expense.price.toString()}'),
-            // if (expense.description?.isNotEmpty ?? false) ...[
-            //   SizedBox(height: 10),
-            //   Text('Description: ${expense.description}'),
-            // ],
-            SizedBox(height: 10),
-            Text('Date: ${expense.date.toString().split(' ')[0]}'),
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Expense Details', // Replace with AppLocalizations if available
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: mainColor,
+              ),
+            ),
+            SizedBox(height: 20),
+            DetailRow(
+              icon: Icons.label,
+              label: 'Name', // Replace with AppLocalizations if available
+              value: expense.name ?? '',
+            ),
+            DetailRow(
+              icon: Icons.attach_money,
+              label: 'Amount', // Replace with AppLocalizations if available
+              value: expense.price?.toString() ?? '',
+            ),
+            DetailRow(
+              icon: Icons.calendar_today,
+              label: 'Date', // Replace with AppLocalizations if available
+              value: expense.date?.toString().split(' ')[0] ?? '',
+            ),
+            SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Close', style: TextStyle(fontSize: 16)), // Replace with AppLocalizations if available
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ExtraExpensesCubit.get(context).deleteExpense(index);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Delete', style: TextStyle(fontSize: 16)), // Replace with AppLocalizations if available
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-          TextButton(
-            onPressed: () {
-              ExtraExpensesCubit.get(context).deleteExpense(index);
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -364,7 +417,7 @@ class _ExtraExpensesScreenState extends State<ExtraExpensesScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  '${AppLocalizations.of(context)!.priceAmount(_calculateTotalExpenses())}',
+                  '${AppLocalizations.of(context)!.currency(_calculateTotalExpenses())}',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -532,7 +585,9 @@ class _ExtraExpensesScreenState extends State<ExtraExpensesScreen> {
               Expanded(
                 child: ExpenseItem(
                   expense: expense,
-                  onTap: (ctx, exp) => showExpenseDetails(ctx, exp, i),
+                  onTap: (ctx, exp){
+                    context.read<ExtraExpensesCubit>().showExpenseDetails(context, expense, i);
+                  },
                 ),
               ),
               SizedBox(width: 5),

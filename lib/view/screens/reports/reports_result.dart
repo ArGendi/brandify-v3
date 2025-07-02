@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:brandify/constants.dart';
 import 'package:brandify/cubits/ads/ads_cubit.dart';
 import 'package:brandify/cubits/all_sells/all_sells_cubit.dart';
@@ -31,6 +32,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:brandify/view/widgets/detail_row.dart';
+import 'package:brandify/models/firebase/firestore/shopify_services.dart';
 
 class ReportsResult extends StatefulWidget {
   final String title;
@@ -231,11 +234,23 @@ class _ReportsResultState extends State<ReportsResult> {
               ),
             ),
             SizedBox(height: 20),
-            _buildDetailRow(AppLocalizations.of(context)!.nameLabel, exp.name ?? ""),
+            DetailRow(
+              icon: Icons.info,
+              label: AppLocalizations.of(context)!.nameLabel,
+              value: exp.name ?? "",
+            ),
             SizedBox(height: 10),
-            _buildDetailRow(AppLocalizations.of(context)!.price, "${exp.price} LE"),
+            DetailRow(
+              icon: Icons.info,
+              label: AppLocalizations.of(context)!.price,
+              value: "${exp.price} LE",
+            ),
             SizedBox(height: 10),
-            _buildDetailRow(AppLocalizations.of(context)!.date, exp.date.toString().split(' ')[0]),
+            DetailRow(
+              icon: Icons.info,
+              label: AppLocalizations.of(context)!.date,
+              value: exp.date.toString().split(' ')[0],
+            ),
             SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -247,18 +262,6 @@ class _ReportsResultState extends State<ReportsResult> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      children: [
-        Text(
-          "$label: ",
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
-        Text(value),
-      ],
     );
   }
 
@@ -302,6 +305,16 @@ class _ReportsResultState extends State<ReportsResult> {
               SellInfo(sell: sell),
               const SizedBox(height: 20),
               if(!sell.isRefunded)
+              sell.shopifyId != null? Center(
+                child: Text(
+                  "( ${AppLocalizations.of(context)!.refundInShopify} )",
+                  style: TextStyle(
+                    //fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: mainColor,
+                  ),
+                ),
+              ):
               BlocBuilder<AllSellsCubit, AllSellsState>(
                 builder: (context, state) {
                   if(state is LoadingRefundSellsState){
@@ -369,8 +382,8 @@ class _ReportsResultState extends State<ReportsResult> {
                   data: [
                     [AppLocalizations.of(navigatorKey.currentContext!)!.metric, AppLocalizations.of(navigatorKey.currentContext!)!.value],
                     [AppLocalizations.of(navigatorKey.currentContext!)!.totalSales, '${current.noOfSells}'],
-                    [AppLocalizations.of(navigatorKey.currentContext!)!.profit, '${current.totalProfit} LE'],
-                    [AppLocalizations.of(navigatorKey.currentContext!)!.totalExpenses, '${current.totalExtraExpensesCost + current.totalAdsCost} LE'],
+                    [AppLocalizations.of(navigatorKey.currentContext!)!.profit, '${AppLocalizations.of(navigatorKey.currentContext!)!.currency(current.totalProfit)}'],
+                    [AppLocalizations.of(navigatorKey.currentContext!)!.totalExpenses, '${AppLocalizations.of(navigatorKey.currentContext!)!.currency(current.totalExtraExpensesCost + current.totalAdsCost)}'],
                   ],
                 ),
                 pw.SizedBox(height: 20),
@@ -448,6 +461,45 @@ class _ReportsResultState extends State<ReportsResult> {
           );
         }
       }
+
+  Future<void> _openShopifyOrder(BuildContext context, int orderId) async {
+    try {
+      // Get the store ID from ShopifyServices
+      final storeId = ShopifyServices.storeId;
+      if (storeId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.shopifyStoreNotConfigured),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Construct the Shopify admin URL for the order
+      final url = "https://admin.shopify.com/";
+      
+      // Launch the URL
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.couldNotOpenShopifyOrder),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorOpeningShopifyOrder(e.toString())),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 }
 
 

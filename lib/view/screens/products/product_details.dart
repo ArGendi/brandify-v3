@@ -20,6 +20,7 @@ import 'package:brandify/view/widgets/custom_texfield.dart';
 import 'package:brandify/constants.dart';
 import 'package:brandify/main.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class ProductDetails extends StatefulWidget {
   final Product product;
@@ -34,9 +35,18 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     totalQuantity = widget.product.getNumberOfAllItems();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndAskForCostPrice();
+    });
+  }
+
+  void _checkAndAskForCostPrice() {
+    if (Package.type == PackageType.shopify &&
+        widget.product.price == widget.product.shopifyPrice) {
+      showCostPriceDialog(context);
+    }
   }
 
   @override
@@ -120,7 +130,16 @@ class _ProductDetailsState extends State<ProductDetails> {
                 icon: const Icon(Icons.delete, color: Colors.white),
                 onPressed: () => showDeleteAlertDialog(context),
               ),
-            ] : null,
+            ] :
+            // Shopify: Only allow editing product price
+            [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white),
+                onPressed: () {
+                  showEditPriceDialog(context);
+                },
+              ),
+            ],
           ),
           SliverToBoxAdapter(
             child: Container(
@@ -167,20 +186,40 @@ class _ProductDetailsState extends State<ProductDetails> {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            "${AppLocalizations.of(context)!.priceAmount(widget.product.price ?? 0) }",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                "${AppLocalizations.of(context)!.currency(widget.product.price ?? 0) }",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                          ),
+                            if(Package.type == PackageType.shopify)
+                            SizedBox(height: 4,),
+                            if(Package.type == PackageType.shopify)
+                            Row(
+                              children: [
+                                FaIcon(FontAwesomeIcons.shopify, size: 15, color: Colors.green,),
+                                SizedBox(width: 5,),
+                                Text(
+                                  "${AppLocalizations.of(context)!.currency(widget.product.shopifyPrice ?? 0) }",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -348,6 +387,113 @@ class _ProductDetailsState extends State<ProductDetails> {
                 navigatorKey.currentState?.pop();
               },
               child: Text(AppLocalizations.of(context)!.delete),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showCostPriceDialog(BuildContext context) {
+    final _formKey = GlobalKey<FormState>();
+    final _costPriceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Enter Cost Price"),
+          content: Form(
+            key: _formKey,
+            child: CustomTextFormField(
+              controller: _costPriceController,
+              text: "Cost Price",
+              keyboardType: TextInputType.number,
+              onValidate: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a cost price';
+                }
+                if (int.tryParse(value) == null) {
+                  return 'Please enter a valid number';
+                }
+                return null;
+              },
+              onSaved: (value) {},
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                navigatorKey.currentState?.pop();
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final newCost = int.parse(_costPriceController.text);
+                  setState(() {
+                    widget.product.price = newCost;
+                  });
+                  await ProductsCubit.get(context)
+                      .updateShopifyProductCost(widget.product, context);
+                  navigatorKey.currentState?.pop();
+                }
+              },
+              child: Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showEditPriceDialog(BuildContext context) {
+    final _formKey = GlobalKey<FormState>();
+    final _priceController = TextEditingController(text: widget.product.price?.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context)?.editProduct ?? 'Edit Product'),
+          content: Form(
+            key: _formKey,
+            child: CustomTextFormField(
+              controller: _priceController,
+              text: AppLocalizations.of(context)?.productPrice ?? 'Product Price',
+              keyboardType: TextInputType.number,
+              onValidate: (value) {
+                if (value == null || value.isEmpty) {
+                  return AppLocalizations.of(context)?.priceRequired ?? 'Enter price';
+                }
+                if (int.tryParse(value) == null) {
+                  return AppLocalizations.of(context)?.priceRequired ?? 'Enter price';
+                }
+                return null;
+              },
+              onSaved: (value) {},
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                navigatorKey.currentState?.pop();
+              },
+              child: Text(AppLocalizations.of(context)?.cancel ?? 'Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (_formKey.currentState!.validate()) {
+                  final newPrice = int.parse(_priceController.text);
+                  setState(() {
+                    widget.product.price = newPrice;
+                  });
+                  await ProductsCubit.get(context).updateShopifyProductCost(widget.product, context);
+                  navigatorKey.currentState?.pop();
+                }
+              },
+              child: Text(AppLocalizations.of(context)?.save ?? 'Save'),
             ),
           ],
         );

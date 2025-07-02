@@ -85,19 +85,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 key: _formKey,
                 child: CustomTextFormField(
                   controller: _emailController,
-                  text: AppLocalizations.of(context)!.phoneNumber,
+                  text: AppLocalizations.of(context)!.email,
                   prefix: Icon(
-                    Icons.phone_iphone_outlined,
+                    Icons.email_rounded,
                     color: Colors.grey[600],
                   ),
                   keyboardType: TextInputType.phone,
                   onSaved: (value) {},
                   onValidate: (value) {
                     if (value == null || value.isEmpty) {
-                      return AppLocalizations.of(context)!.enterPhone;
+                      return 'Please enter your email';
                     }
-                    if (value.length != 11) {
-                      return AppLocalizations.of(context)!.enterValidPhone;
+                    if (!RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}").hasMatch(value)) {
+                      return AppLocalizations.of(context)!.invalidEmail;
                     }
                     return null;
                   },

@@ -57,7 +57,11 @@ class Cache{
   }
 
   static Future<void> clear() async{
+    String? languageCode = sharedPreferences.getString('languageCode');
     await sharedPreferences.clear();
+    if (languageCode != null) {
+      await sharedPreferences.setString('languageCode', languageCode);
+    }
   }
 
   // Total Orders
@@ -81,14 +85,15 @@ class Cache{
   
   static Future<void> setInitialUserData({
     required String name,
-    required String phone,
+    required String email,
+    
     String packageType = PACKAGE_TYPE_ONLINE,
     int total = 0,
     int totalProfit = 0,
     int totalOrders = 0,
   }) async{
     setName(name);
-    setPhone(phone);
+    setEmail(email);
     setPackageType(packageType);
     setTotal(total);
     setTotalProfit(totalProfit);
@@ -109,5 +114,13 @@ class Cache{
 
   static bool? getBool(String key) {
     return sharedPreferences.getBool(key);
+  }
+
+  static String? getEmail() {
+    return sharedPreferences.getString("email");
+  }
+
+  static Future<void> setEmail(String value) async {
+    await sharedPreferences.setString("email", value);
   }
 }

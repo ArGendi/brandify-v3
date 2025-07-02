@@ -68,30 +68,44 @@ class AllSellsCubit extends Cubit<AllSellsState> {
     return sellsFromDB;
   }
 
-  Future<void> getSells({int ads = 0, List<Product>? allProducts}) async{
-    if(sells.isNotEmpty) return;
+  Future<void> getSells({int expenses = 0, List<Product>? allProducts}) async{
+    //if(sells.isNotEmpty) return;
+    List<Sell> temp = List.from(sells);
+    sells = [];
 
-    emit(LoadingAllSellsState());
-    await Package.checkAccessability(
-      online: () async{
-        var response = await SellsServices().getSells();
-        if(response.status == Status.success){
-          sells.addAll(response.data);
-        }
-      },
-      offline: () async{
-        sells = await getSellsFromDB();
-      },
-      shopify: () async{
-        List shopifySells = await ShopifyServices().getOrders();
-        for(var one in shopifySells){
-          sells.add(Sell.fromShopifyOrder(one, allProducts ?? []));
-          print(sells);
-        }
-      },
-    );
-    _calculateTotals(ads);
-    emit(SuccessAllSellsState());
+    try{
+      emit(LoadingAllSellsState());
+      await Package.checkAccessability(
+        online: () async{
+          var response = await SellsServices().getSells();
+          if(response.status == Status.success){
+            sells.addAll(response.data);
+          }
+        },
+        offline: () async{
+          sells = await getSellsFromDB();
+        },
+        shopify: () async{
+          List shopifySells = await ShopifyServices().getOrders();
+          for(var one in shopifySells){
+            Sell newSell = Sell.fromShopifyOrder(one, allProducts ?? []);
+            sells.add(newSell);
+            print(sells);
+          }
+          var response = await SellsServices().getSells();
+          if(response.status == Status.success){
+            sells.addAll(response.data);
+          }
+        },
+      );
+      _calculateTotals(expenses);
+      emit(SuccessAllSellsState());
+    }
+    catch(e){
+      sells = List.from(temp);
+      emit(SuccessAllSellsState());
+    }
+    
   }
 
   void deductFromProfit(int value){
@@ -110,15 +124,21 @@ class AllSellsCubit extends Cubit<AllSellsState> {
     }
   }
 
-  void _calculateTotals(int ads) {
-    sells.sort((a,b) => b.date!.compareTo(a.date!));
+  void _calculateTotals(int expenses) {
+    //sells.sort((a,b) => b.date!.compareTo(a.date!));
+    total = 0;
+    totalProfit = 0;
+
     for(var one in sells){
       if(!one.isRefunded){
+        if(one.shopifyId != null && one.status != "paid"){
+          continue;
+        }
         total += one.priceOfSell!;
         totalProfit += one.profit;
       }
     }
-    totalProfit -= ads;
+    totalProfit -= expenses;
   }
 
   Future<void> _processRefund(BuildContext context, Sell targetSell) async {
@@ -133,7 +153,7 @@ class AllSellsCubit extends Cubit<AllSellsState> {
         print("id: $id");
       },
       shopify: () async {
-        id = targetSell.product?.shopifyId;
+        id = targetSell.product?.shopifyId ?? targetSell.product?.backendId;
       }
     );
     Product? refundedProduct = ProductsCubit.get(context).refundProduct(
@@ -170,6 +190,8 @@ class AllSellsCubit extends Cubit<AllSellsState> {
 
   Future<void> _updateRefundedData(BuildContext context, int index, Sell targetSell, Product refundedProduct) async {
     SidesCubit.get(context).refundSide(targetSell.sideExpenses);
+    
+    // Update inventory
     await Package.checkAccessability(
       online: () async {
         await FirestoreServices().update(productsTable, refundedProduct.backendId.toString(), refundedProduct.toJson());
@@ -178,9 +200,16 @@ class AllSellsCubit extends Cubit<AllSellsState> {
         await Hive.box(HiveServices.getTableName(productsTable)).put(targetSell.product!.id, refundedProduct.toJson());
       },
       shopify: () async{
-        await ShopifyServices().updateInventory(refundedProduct);
+        if(targetSell.shopifyId != null){
+          await ShopifyServices().updateInventory(refundedProduct);
+        }
+        else{
+          await FirestoreServices().update(productsTable, refundedProduct.backendId.toString(), refundedProduct.toJson());
+        }
       },
     );
+    
+    // Update sell record and process Shopify refund
     await Package.checkAccessability(
       online: () async {
         await FirestoreServices().update(sellsTable, sells[index].backendId.toString(), sells[index].toJson());
@@ -189,8 +218,40 @@ class AllSellsCubit extends Cubit<AllSellsState> {
         await Hive.box(HiveServices.getTableName(sellsTable)).put(sells[index].id, sells[index].toJson());
       },
       shopify: () async{
-        // TODO: Implement refund order functionality in ShopifyServices
-        // For now, we'll skip the refund operation for Shopify orders
+        if(targetSell.shopifyId != null){
+          try {
+            print("Attempting Shopify refund for order: ${targetSell.shopifyId}");
+            
+            // First test the refund process
+            final testResult = await ShopifyServices().testRefundProcess(targetSell.shopifyId!);
+            print("Test result: $testResult");
+            
+            if (testResult['success'] == true) {
+              // Test passed, proceed with manual refund
+              final refundResult = await ShopifyServices().manualRefundOrder(
+                targetSell.shopifyId!,
+                reason: 'Customer requested refund'
+              );
+              print("Manual refund result: $refundResult");
+              
+              if (refundResult['success'] == true) {
+                print("Shopify refund successful");
+              } else {
+                print("Shopify refund failed: ${refundResult['error']}");
+                // Don't throw error here, just log it since the local refund was successful
+              }
+            } else {
+              print("Shopify refund test failed: ${testResult['error']}");
+              // Don't throw error here, just log it since the local refund was successful
+            }
+          } catch (e) {
+            print("Error during Shopify refund: $e");
+            // Don't throw error here, just log it since the local refund was successful
+          }
+        }
+        else{
+          await FirestoreServices().update(sellsTable, sells[index].backendId.toString(), sells[index].toJson());
+        }
       },
     );
   }

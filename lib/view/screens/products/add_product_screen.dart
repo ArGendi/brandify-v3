@@ -118,18 +118,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     SizedBox(
                       height: 15,
                     ),
-                    Row(
-                      children: [
-                        SizedBox(width: 5,),
-                        Text(
-                          AppLocalizations.of(context)!.mandatoryFieldsNote,
-                          style: TextStyle(color: Colors.green),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 5,
-                    ),
+                    // Row(
+                    //   children: [
+                    //     SizedBox(width: 5,),
+                    //     Text(
+                    //       AppLocalizations.of(context)!.mandatoryFieldsNote,
+                    //       style: TextStyle(color: Colors.green),
+                    //     ),
+                    //   ],
+                    // ),
+                    // SizedBox(
+                    //   height: 5,
+                    // ),
                     Row(
                       children: [
                         Expanded(
@@ -210,25 +210,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     SizedBox(
                       height: 15,
                     ),
-                    Row(
-                      children: [
-                        SizedBox(width: 5,),
-                        Expanded(child: Text(
-                          AppLocalizations.of(context)!.originalPriceHint,
-                          style: TextStyle(fontSize: 11),
-                        )),
-                      ],
-                    ),
-                    SizedBox(
-                      height: 5,
-                    ),
                     CustomTextFormField(
                       initial:
                           AddProductCubit.get(context)
                                   .product
                                   .price?.toString(),
                       keyboardType: TextInputType.number,
-                      text: AppLocalizations.of(context)!.originalPrice,
+                      text: AppLocalizations.of(context)!.requiredCostPrice,
                       hintText: AppLocalizations.of(context)!.pricePaidHint,
                       onSaved: (value) {
                         if (value!.isNotEmpty) {
@@ -241,6 +229,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           return  AppLocalizations.of(context)!.priceRequired;
                         } else return null;
                       },
+                    ),
+                    SizedBox(
+                      height: 3,
+                    ),
+                    Row(
+                      children: [
+                        SizedBox(width: 5,),
+                        Expanded(child: Text(
+                          AppLocalizations.of(context)!.originalPriceHint,
+                          style: TextStyle(fontSize: 11),
+                        )),
+                      ],
                     ),
                     if (Package.type == PackageType.shopify)
                       Column(
@@ -302,7 +302,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                     controller: AddProductCubit.get(context)
                                         .sizesControllers[i]
                                         .sizeController,
-                                    text: AppLocalizations.of(context)!.anotherSize,
+                                    text: AppLocalizations.of(context)!.size,
                                     onSaved: (value) {},
                                   ),
                                 ),
@@ -315,7 +315,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                         .sizesControllers[i]
                                         .quantityController,
                                     keyboardType: TextInputType.number,
-                                    text: AppLocalizations.of(context)!.quantity,
+                                    text: AppLocalizations.of(context)!.requiredQuantity,
                                     onSaved: (value) {},
                                   ),
                                 ),
@@ -350,7 +350,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     //   height: 10,
                     // ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                       child: CustomButton(
                         icon: Icon(Icons.add),
                         text: AppLocalizations.of(context)!.addAnotherSize,

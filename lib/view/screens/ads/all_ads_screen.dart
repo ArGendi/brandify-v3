@@ -10,6 +10,7 @@ import 'package:brandify/view/screens/ads/ads_screen.dart';
 import 'package:brandify/view/widgets/ad_item.dart';
 import 'package:brandify/view/widgets/platform_totals_card.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:brandify/view/widgets/detail_row.dart';
 
 class AllAdsScreen extends StatefulWidget {
   const AllAdsScreen({super.key});
@@ -179,7 +180,7 @@ class _AllAdsScreenState extends State<AllAdsScreen> {
                                     ad: AdsCubit.get(context).filteredAds[i],
                                     color: AdsCubit.get(context).getAdColor(AdsCubit.get(context).filteredAds[i]),
                                     icon: AdsCubit.get(context).getAdIcon(AdsCubit.get(context).filteredAds[i]),
-                                    onTap: _showEnhancedAdDetails,
+                                    onTap: context.read<AdsCubit>().showEnhancedAdDetails,
                                   ),
                                 ),
                                 SizedBox(width: 5),
@@ -250,7 +251,7 @@ class _AllAdsScreenState extends State<AllAdsScreen> {
                                                         borderRadius: BorderRadius.circular(10),
                                                       ),
                                                     ),
-                                                    child: Text("Delete"),
+                                                    child: Text(AppLocalizations.of(context)!.delete),
                                                   ),
                                                 ),
                                               ],
@@ -331,11 +332,27 @@ class _AllAdsScreenState extends State<AllAdsScreen> {
               ),
             ),
             SizedBox(height: 20),
-            _buildDetailRow(Icons.campaign, AppLocalizations.of(context)!.platform, ad.platform?.name ?? AppLocalizations.of(context)!.notAvailable),
-            _buildDetailRow(Icons.attach_money, AppLocalizations.of(context)!.cost, "${AppLocalizations.of(context)!.currency(ad.cost ?? 0)}"),
-            _buildDetailRow(Icons.calendar_today, AppLocalizations.of(context)!.date, ad.date.toString().split(" ").first),
+            DetailRow(
+              icon: Icons.campaign,
+              label: AppLocalizations.of(context)!.platform,
+              value: ad.platform?.name ?? AppLocalizations.of(context)!.notAvailable,
+            ),
+            DetailRow(
+              icon: Icons.attach_money,
+              label: AppLocalizations.of(context)!.cost,
+              value: "${AppLocalizations.of(context)!.currency(ad.cost ?? 0)}",
+            ),
+            DetailRow(
+              icon: Icons.calendar_today,
+              label: AppLocalizations.of(context)!.date,
+              value: ad.date.toString().split(" ").first,
+            ),
             if(ad.description != null) 
-              _buildDetailRow(Icons.description, AppLocalizations.of(context)!.descriptionLabel, ad.description ?? ""),
+              DetailRow(
+                icon: Icons.description,
+                label: AppLocalizations.of(context)!.descriptionLabel,
+                value: ad.description ?? "",
+              ),
             SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -354,32 +371,6 @@ class _AllAdsScreenState extends State<AllAdsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: mainColor),
-          SizedBox(width: 12),
-          Text(
-            "$label: ",
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[700],
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-        ],
       ),
     );
   }

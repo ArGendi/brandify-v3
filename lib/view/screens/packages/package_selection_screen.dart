@@ -52,8 +52,8 @@ class PackageSelectionScreen extends StatelessWidget {
                 AppLocalizations.of(context)!.basicReporting,
                 AppLocalizations.of(context)!.unlimitedProducts,
               ],
-              color: Colors.blue,
-              icon: Icons.phone_android,
+              color: Colors.grey,
+              icon: Icons.phone_iphone,
             ),
             SizedBox(height: 20),
             _buildPackageCard(
@@ -67,7 +67,7 @@ class PackageSelectionScreen extends StatelessWidget {
                 AppLocalizations.of(context)!.advancedReporting,
                 AppLocalizations.of(context)!.dataBackup,
               ],
-              color: Colors.green,
+              color: Colors.blue,
               icon: Icons.cloud,
             ),
             SizedBox(height: 20),
@@ -82,9 +82,9 @@ class PackageSelectionScreen extends StatelessWidget {
                 AppLocalizations.of(context)!.orderManagement,
                 AppLocalizations.of(context)!.allOnlineFeatures,
               ],
-              color: Colors.grey,
+              color: Colors.green,
               icon: Icons.shopping_bag,
-              isComingSoon: true,
+              //isComingSoon: true,
             ),
             SizedBox(height: 20),
           ],
@@ -182,6 +182,7 @@ class PackageSelectionScreen extends StatelessWidget {
                                     "package": PACKAGE_TYPE_OFFLINE,
                                   });
                                   await Cache.setPackageType(PACKAGE_TYPE_OFFLINE);
+                                  
                                   navigatorKey.currentState?.pushAndRemoveUntil(
                                     MaterialPageRoute(builder: (context) => HomeScreen()),
                                     (route) => false,

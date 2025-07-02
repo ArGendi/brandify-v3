@@ -41,7 +41,11 @@ class Product{
   Product.fromShopify(Map<String, dynamic> shopifyProduct) {
     shopifyId = shopifyProduct['id'];
     name = shopifyProduct['title'];
-    description = shopifyProduct['body_html'];
+    description = shopifyProduct['body_html'] != null ? 
+    shopifyProduct['body_html'].toString().substring(
+      3, 
+      shopifyProduct['body_html'].toString().length - 4
+    ) : null;
     image = shopifyProduct['images']?.isNotEmpty == true 
         ? shopifyProduct['images'][0]['src'] 
         : null;

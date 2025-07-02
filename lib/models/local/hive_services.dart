@@ -5,8 +5,8 @@ import 'package:brandify/models/local/cache.dart';
 class HiveServices {
 
   static Future<void> openUserBoxes() async {
-    final phone = Cache.getPhone();
-    if (phone != null) {
+    final email = Cache.getEmail();
+    if (email != null) {
       if(!Hive.isBoxOpen(getTableName(productsTable))) {
         await Hive.openBox(getTableName(productsTable));
       }
@@ -26,7 +26,7 @@ class HiveServices {
   }
 
   static String getTableName(String table) {
-    final phone = Cache.getPhone();
-    return "${phone}_$table";
+    final email = Cache.getEmail();
+    return "${email}_$table";
   }
 }

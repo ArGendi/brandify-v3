@@ -123,6 +123,7 @@ class PackageCubit extends Cubit<PackageState> {
           // Save data to Hive boxes
           print("hereeeeee 2");
           await Cache.setPhone(AppUserCubit.get(navigatorKey.currentState!.context).brandPhone?? "");
+          await Cache.setEmail(AppUserCubit.get(navigatorKey.currentState!.context).email?? "");
           print("hereeeeee 3");
           await HiveServices.openUserBoxes();
           print("hereeeeee 4");
@@ -184,6 +185,7 @@ class PackageCubit extends Cubit<PackageState> {
           });
           print("hereeeeee 8");
           await Cache.setName(AppUserCubit.get(navigatorKey.currentState!.context).brandName ?? "");
+          await Cache.setEmail(AppUserCubit.get(navigatorKey.currentState!.context).email?? "");
           await Cache.setPhone(AppUserCubit.get(navigatorKey.currentState!.context).brandPhone?? "");
           await Cache.setTotal(AppUserCubit.get(navigatorKey.currentState!.context).total);
           await Cache.setTotalProfit(AppUserCubit.get(navigatorKey.currentState!.context).totalProfit);

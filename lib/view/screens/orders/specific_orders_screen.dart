@@ -1,3 +1,4 @@
+import 'package:brandify/constants.dart';
 import 'package:brandify/cubits/app_user/app_user_cubit.dart';
 import 'package:brandify/main.dart';
 import 'package:brandify/models/local/cache.dart';
@@ -14,8 +15,11 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:brandify/models/firebase/firestore/shopify_services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:brandify/view/widgets/custom_texfield.dart';
 
 class SpecificOrdersScreen extends StatefulWidget {
   final List<Sell> orders;
@@ -90,7 +94,7 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
             ),
           ),
           pw.Text(
-            DateTime.now().toString(),
+            DateTime.now().toString().split(".").first,
             style: pw.TextStyle(
               fontSize: 10,
               fontStyle: pw.FontStyle.italic,
@@ -108,8 +112,8 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
                 // ),
                 pw.Text('${l10n.product}: ${order.product?.name}'),
                 pw.Text('${l10n.size}: ${order.size?.name ?? l10n.notAvailable}'),
-                pw.Text('${l10n.quantity}: ${order.quantity}'),
-                pw.Text('${l10n.price}: ${order.priceOfSell} LE'),
+                pw.Text('${l10n.quantityLabel(order.quantity ?? 0)}'),
+                pw.Text('${l10n.price}: ${l10n.currency(order.priceOfSell ?? 0)}'),
                 if (order.isRefunded)
                   pw.Text(
                     l10n.refunded,
@@ -131,7 +135,7 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
             children: [
               pw.Text('${l10n.totalOrders}: $quantity'),
               pw.Text(
-                '${l10n.totalProfit}: ${selectedOrders.fold(0.0, (sum, order) => sum + (order.priceOfSell ?? 0))} LE',
+                '${l10n.total}: ${l10n.currency(selectedOrders.fold(0.0, (double sum, Sell order) => sum + (order.priceOfSell ?? 0)).toString())}',
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               ),
             ],
@@ -188,6 +192,21 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
+            CustomTextFormField(
+              text: l10n.searchProducts,
+              hintText: l10n.searchProducts,
+              onSaved: (_) {},
+              onChange: (value) {
+                setState(() {
+                  filteredOrders = widget.orders.where((order) {
+                    final productName = order.product?.name?.toLowerCase() ?? '';
+                    final search = value?.toLowerCase() ?? '';
+                    return productName.contains(search);
+                  }).toList();
+                });
+              },
+            ),
+            SizedBox(height: 16),
             Container(
               padding: EdgeInsets.all(15),
               decoration: BoxDecoration(
@@ -376,21 +395,32 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
                 SellInfo(sell: sell),
                 const SizedBox(height: 20),
                 if (!sell.isRefunded)
-                  BlocBuilder<AllSellsCubit, AllSellsState>(
-                    builder: (context, state) {
-                      if (state is LoadingRefundSellsState) {
-                        return Center(child: Loading());
-                      } else {
-                        return CustomButton(
-                          text: l10n.refund,
-                          onPressed: () {
-                            AllSellsCubit.get(context).refund(context, sell);
+                  sell.shopifyId != null
+                      ? Center(
+                        child: Text(
+                          "( ${AppLocalizations.of(context)!.refundInShopify} )",
+                          style: TextStyle(
+                            //fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: mainColor,
+                          ),
+                        ),
+                      )
+                      : BlocBuilder<AllSellsCubit, AllSellsState>(
+                          builder: (context, state) {
+                            if (state is LoadingRefundSellsState) {
+                              return Center(child: Loading());
+                            } else {
+                              return CustomButton(
+                                text: l10n.refund,
+                                onPressed: () {
+                                  AllSellsCubit.get(context).refund(context, sell);
+                                },
+                                //bgColor: Color(0xFF5E6C58),
+                              );
+                            }
                           },
-                          //bgColor: Color(0xFF5E6C58),
-                        );
-                      }
-                    },
-                  ),
+                        ),
                 if (!sell.isRefunded) const SizedBox(height: 10),
                 CustomButton(
                   text: l10n.close,
@@ -401,5 +431,45 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
             ),
           ),
     );
+  }
+
+  Future<void> _openShopifyOrder(BuildContext context, int orderId) async {
+    try {
+      // Get the store ID from ShopifyServices
+      final storeId = ShopifyServices.storeId;
+      if (storeId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.shopifyStoreNotConfigured),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      // Construct the Shopify admin URL for the order
+      final url = 'https://admin.shopify.com/';
+
+      
+      // Launch the URL
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.couldNotOpenShopifyOrder),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.errorOpeningShopifyOrder(e.toString())),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

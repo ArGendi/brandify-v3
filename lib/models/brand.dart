@@ -3,20 +3,24 @@ class Brand {
   String? backendId;
   String? name;
   String? phone;
+  String? email;
 
-  Brand({this.name, this.phone});
+  Brand({this.name, this.phone, this.email});
 
   Brand.fromJson(Map<dynamic, dynamic> json){
     id = json["id"];
     name = json["name"];
-    phone = json["phone"];
+    phone = json["brandPhone"] ?? json["phone"];
+    email = json["email"];
   }
 
   Map<String, dynamic> toJson(){
-    return {
+    final map = <String, dynamic>{
       "id": id,
       "brandName": name,
-      "brandPhone": phone,
     };
+    if (phone != null) map["brandPhone"] = phone;
+    if (email != null) map["email"] = email;
+    return map;
   }
 }

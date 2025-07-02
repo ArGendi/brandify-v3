@@ -1,7 +1,9 @@
+import 'package:brandify/cubits/language/language_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:brandify/constants.dart';
 import 'package:brandify/l10n/l10n.dart';
 import 'package:brandify/models/local/cache.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({Key? key}) : super(key: key);
@@ -51,8 +53,9 @@ class _LanguageItem extends StatelessWidget {
       title: Text(title),
       trailing: isSelected ? const Icon(Icons.check, color: mainColor) : null,
       onTap: () async {
-        await Cache.setLanguage(locale.languageCode);
-        L10n.setLocale(context, locale);
+        context.read<LanguageCubit>().changeLanguage(locale.languageCode);
+        // await Cache.setLanguage();
+        // L10n.setLocale(context, locale);
       },
     );
   }
