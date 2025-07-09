@@ -82,6 +82,44 @@ class ExtraExpensesCubit extends Cubit<ExtraExpensesState> {
     }
   }
 
+  Future<int> getExpensesInDateRange(DateTime fromDate, DateTime toDate) async {
+    try {
+      emit(ExtraExpensesLoading());
+      await Package.checkAccessability(
+        online: () async {
+          var response = await ExtraExpensesServices().getExtraExpenses();
+          if (response.status == Status.success) {
+            // Filter expenses by date range
+            _allExpenses = response.data.where((expense) {
+              if (expense.date == null) return false;
+              return expense.date!.isAfter(DateTime(fromDate.year, fromDate.month, fromDate.day)) && 
+                     expense.date!.isBefore(DateTime(toDate.year, toDate.month, toDate.day).add(const Duration(days: 1)));
+            }).toList();
+            expenses = List.from(_allExpenses); // Create a copy for filtering
+            sortExpenses(byPrice: false, descending: true);
+          }
+        },
+        offline: () async {
+          await getAllExpensesFromHive();
+          // Filter expenses by date range from local storage
+          _allExpenses = expenses.where((expense) {
+            if (expense.date == null) return false;
+            return expense.date!.isAfter(fromDate.subtract(const Duration(days: 1))) && 
+                   expense.date!.isBefore(toDate.add(const Duration(days: 1)));
+          }).toList();
+          expenses = List.from(_allExpenses); // Create a copy for filtering
+          sortExpenses(byPrice: false, descending: true);
+        },
+      );
+      emit(ExtraExpensesLoaded());
+      int totalCost = expenses.fold(0, (sum, expense) => sum + (expense.price ?? 0));
+      return totalCost;
+    } catch (e) {
+      emit(ExtraExpensesError(e.toString()));
+      return 0;
+    }
+  }
+
   void filterExpensesByDate(DateTime start, DateTime end) {
     expenses = _allExpenses.where((expense) {
       if (expense.date == null) return false;

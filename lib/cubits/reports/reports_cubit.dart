@@ -34,6 +34,54 @@ class ReportsCubit extends Cubit<ReportsState> {
     emit(GetReportState());
   }
 
+  void startLoading(){
+    emit(LoadingReportsState());
+  }
+
+  void setCurrentReport(List<Sell> sells, List<Ad> ads, List<ExtraExpense> extraExpenses, DateTime from, DateTime to){
+    List<Sell> unRefundedSells = sells.where((e) => e.isRefunded == false).toList();
+    int totalIncome = 0;
+    int totalProfit = 0;
+    int totalNumberOfSells = 0;
+    int totalAds = 0;
+    int totalExtraExpense = 0;
+
+    for(var sell in unRefundedSells){
+      if(!sell.isRefunded){
+        if(sell.shopifyId != null && sell.status != "paid"){
+          continue;
+        }
+        totalIncome += sell.priceOfSell!;
+        totalProfit += sell.profit;
+        totalNumberOfSells += sell.quantity ?? 0;
+      }
+    }
+    for(var ad in ads){
+      totalProfit -= ad.cost ?? 0;
+      totalAds += ad.cost?? 0;
+    }
+    for(var extraExpense in extraExpenses){
+      totalProfit -= extraExpense.price ?? 0;
+      totalExtraExpense += extraExpense.price?? 0;
+    }
+
+    ads.sort((a, b) => (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now()));
+
+    sells.sort((a,b) => b.date!.compareTo(a.date!));
+    currentReport = Report(
+      noOfSells: totalNumberOfSells,
+      totalIncome: totalIncome,
+      totalProfit: totalProfit,
+      totalAdsCost: totalAds,
+      totalExtraExpensesCost: totalExtraExpense,
+      sells: sells,
+      ads: ads,
+      extraExpenses: extraExpenses,
+      dateRange: DateTimeRange(start: from, end: to),
+    );
+    emit(GetReportState());
+  }
+
   void setTodayReport(List<Sell> sells, List<Ad> ads, List<ExtraExpense> extraExpenses){
 
     List<Sell> todaySells = sells.where((e) => e.date!.difference(DateTime.now()).inDays == 0).toList();
@@ -280,7 +328,7 @@ class ReportsCubit extends Cubit<ReportsState> {
   void onGetResults(BuildContext context, List<Sell> sells, List<Ad> ads, List<ExtraExpense> extraExpenses){
     if(fromDate != null && toDate != null){
       currentReport = setFromToReport(sells, ads, extraExpenses);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ReportsResult()));
+      //Navigator.push(context, MaterialPageRoute(builder: (_) => ReportsResult()));
     }
     else{
       ScaffoldMessenger.of(context).showSnackBar(

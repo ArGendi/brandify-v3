@@ -396,16 +396,7 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
                 const SizedBox(height: 20),
                 if (!sell.isRefunded)
                   sell.shopifyId != null
-                      ? Center(
-                        child: Text(
-                          "( ${AppLocalizations.of(context)!.refundInShopify} )",
-                          style: TextStyle(
-                            //fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: mainColor,
-                          ),
-                        ),
-                      )
+                      ? Container()
                       : BlocBuilder<AllSellsCubit, AllSellsState>(
                           builder: (context, state) {
                             if (state is LoadingRefundSellsState) {

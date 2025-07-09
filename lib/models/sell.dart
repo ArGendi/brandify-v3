@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:brandify/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -65,6 +67,7 @@ class Sell{
       //   name: lineItem['title'],
       // );
       product = _findProductByShopifyId(lineItem['product_id'], allProducts);
+      print("producttttttttttt: $product");
       size = ProductSize(name: lineItem['variant_title']);
       
       // Calculate profit
@@ -76,14 +79,16 @@ class Sell{
     // Set default values
     sideExpenses = [];
     extraExpenses = 0;
-    isRefunded = order['financial_status'] == 'refunded';
+    isRefunded = (order['refunds'] != null && (order['refunds'] as List).isNotEmpty);
     place = SellPlace.online;
   }
 
   Product? _findProductByShopifyId(int shopifyId, List<Product> products) {
     try {
       return products.firstWhere(
-        (product) => product.shopifyId == shopifyId,
+        (product) {
+          return product.shopifyId == shopifyId;
+        },
         orElse: () => throw Exception('Product not found'),
       );
     } catch (e) {

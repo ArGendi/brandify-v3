@@ -513,5 +513,13 @@
     },
     "sellInformation": "معلومات البيع",
     "sortBy": "ترتيب حسب",
-    "shopifySetupHelpWhatsApp": "أحتاج مساعدة في إعداد شوبيفاي الخاص بي"
+    "shopifySetupHelpWhatsApp": "أحتاج مساعدة في إعداد شوبيفاي الخاص بي",
+    "todaysTotalSales": "إجمالي مبيعات اليوم",
+    "todaysProfit": "ربح اليوم",
+    "shopifyDialogTitle": "الاتصال بشوبيفاي",
+    "shopifyDialogBody": "هل لديك متجر شوبيفاي وتريد ربطه بالتطبيق؟",
+    "yes": "نعم",
+    "no": "لا",
+    "connectShopifyTitle": "الاتصال بشوبيفاي",
+    "connectShopifySubtitle": "اربط متجرك شوبيفاي بالتطبيق"
 }

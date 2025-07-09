@@ -189,6 +189,7 @@ class RecentTransactionsSection extends StatelessWidget {
   Widget _buildRecentAds(BuildContext context, dynamic current) {
     return BlocBuilder<AdsCubit, AdsState>(
       builder: (context, state) {
+        
         final recentAds = current.ads.take(3).toList();
         return ListView.separated(
           shrinkWrap: true,

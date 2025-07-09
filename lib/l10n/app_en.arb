@@ -523,5 +523,13 @@
     },
     "sellInformation": "Sell Information",
     "sortBy": "Sort By",
-    "shopifySetupHelpWhatsApp": "I need help with my Shopify setup"
+    "shopifySetupHelpWhatsApp": "I need help with my Shopify setup",
+    "todaysTotalSales": "Today's Total Sales",
+    "todaysProfit": "Today's Profit",
+    "shopifyDialogTitle": "Connect to Shopify",
+    "shopifyDialogBody": "Do you have a Shopify store and want to connect it with the app?",
+    "yes": "Yes",
+    "no": "No",
+    "connectShopifyTitle": "Connect to Shopify",
+    "connectShopifySubtitle": "Connect your Shopify store to the app"
 }

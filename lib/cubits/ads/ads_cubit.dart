@@ -164,7 +164,7 @@ class AdsCubit extends Cubit<AdsState> {
   }
 
   void sortAdsByDate({bool descending = true}) {
-    ads.sort((a, b) => descending
+    filteredAds.sort((a, b) => descending
         ? (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now())
         : (a.date ?? DateTime.now()).compareTo(b.date ?? DateTime.now()));
     emit(AdsChangedState());
@@ -183,7 +183,7 @@ class AdsCubit extends Cubit<AdsState> {
           var response = await AdsServices().getAds();
           if (response.status == Status.success) {
             ads = response.data;
-            filteredAds = List.from(ads); // Initialize filtered ads with all ads
+            //filteredAds = List.from(ads); // Initialize filtered ads with all ads
             for(var ad in ads){
               totalCost += ad.cost ?? 0;
             }
@@ -191,9 +191,11 @@ class AdsCubit extends Cubit<AdsState> {
         },
         offline: () async {
           totalCost = getAllAdsFromHive();
-          filteredAds = List.from(ads); // Initialize filtered ads with all ads
+          //filteredAds = List.from(ads); // Initialize filtered ads with all ads
         },
       );
+      ads.sort((a, b) => (b.date ?? DateTime.now()).compareTo(a.date ?? DateTime.now()));
+      filteredAds = List.from(ads);
       emit(AdsLoaded());
       return totalCost;
     } catch (e) {
@@ -201,6 +203,49 @@ class AdsCubit extends Cubit<AdsState> {
       return 0;
     }
   }
+
+  Future<int> getAdsInDateRange(DateTime fromDate, DateTime toDate) async {
+    try {
+      emit(AdsLoading());
+      int totalCost = 0;
+      await Package.checkAccessability(
+        online: () async {
+          var response = await AdsServices().getAds();
+          if (response.status == Status.success) {
+            // Filter ads by date range
+            ads = response.data.where((ad) {
+              if (ad.date == null) return false;
+              return ad.date!.isAfter(DateTime(fromDate.year, fromDate.month, fromDate.day)) && 
+                     ad.date!.isBefore(DateTime(toDate.year, toDate.month, toDate.day).add(const Duration(days: 1)));
+            }).toList();
+            filteredAds = List.from(ads); // Initialize filtered ads with date range ads
+            for(var ad in ads){
+              totalCost += ad.cost ?? 0;
+            }
+          }
+        },
+        offline: () async {
+          // Get all ads from Hive and filter by date range
+          getAllAdsFromHive();
+          ads = ads.where((ad) {
+            if (ad.date == null) return false;
+            return ad.date!.isAfter(fromDate.subtract(const Duration(days: 1))) && 
+                   ad.date!.isBefore(toDate.add(const Duration(days: 1)));
+          }).toList();
+          filteredAds = List.from(ads); // Initialize filtered ads with date range ads
+          for(var ad in ads){
+            totalCost += ad.cost ?? 0;
+          }
+        },
+      );
+      emit(AdsLoaded());
+      return totalCost;
+    } catch (e) {
+      emit(AdsError(e.toString()));
+      return 0;
+    }
+  }
+
 
   void filterAdsByDate(DateTime start, DateTime end) {
     filteredAds = ads.where((ad) {

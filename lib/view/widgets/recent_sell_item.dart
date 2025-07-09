@@ -37,6 +37,8 @@ class RecentSellItem extends StatelessWidget {
               children: [
                 Text(
                   "(${sell.quantity}) ${sell.product?.name}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     decoration:
                         sell.isRefunded ? TextDecoration.lineThrough : null,

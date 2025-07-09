@@ -23,3 +23,5 @@ class UserUpdatedState extends AppUserState {}
 class AppUserSuccess extends AppUserState {}
 
 class AppUserDataValuesLoading extends AppUserState {}
+
+class TotalAndProfitUpdatedState extends AppUserState {}

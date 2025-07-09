@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:brandify/enum.dart';
@@ -36,6 +37,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   void initState() {
     super.initState();
+    log(widget.product.shopifyId.toString());
     totalQuantity = widget.product.getNumberOfAllItems();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndAskForCostPrice();
@@ -186,6 +188,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                             ],
                           ),
                         ),
+                        SizedBox(width: 15,),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -285,14 +288,18 @@ class _ProductDetailsState extends State<ProductDetails> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    color: (size.quantity ?? 0) > 0 ?
+                                      Theme.of(context).primaryColor.withOpacity(0.1)
+                                      : Colors.red.shade600,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     size.quantity.toString(),
                                     style: TextStyle(
-                                      color: Theme.of(context).primaryColor,
+                                      color: (size.quantity ?? 0) > 0 ? 
+                                        Theme.of(context).primaryColor : Colors.white,
                                       fontWeight: FontWeight.w500,
+                                      
                                     ),
                                   ),
                                 ),

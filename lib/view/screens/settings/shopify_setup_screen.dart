@@ -76,6 +76,7 @@ class _ShopifySetupScreenState extends State<ShopifySetupScreen> {
           //"storeFrontAPIAcessToken": _storefrontTokenController.text,
           "storeId": storeId,
           "locationId": locationId,
+          "package": PACKAGE_TYPE_SHOPIFY,
         });
         if(res.status == Status.success){
           ShopifyServices.setParamters(

@@ -29,6 +29,12 @@ class ShopifyServices {
     locationId = newLocationId;
   }
 
+  static void clearValues(){
+    adminAPIAcessToken = null;
+    locationId = null;
+    storeId = null;
+  }
+
   // Future<List<Product>> getProducts() async {
   //   try {
   //     final products = await shopifyStore.getAllProducts();
@@ -66,24 +72,32 @@ class ShopifyServices {
   final List<dynamic> allProducts = [];
   String? nextPageToken;
   int attemptCount = 0;
-  const int maxAttempts = 20; // Safety net
+  const int maxAttempts = 100; // Increased safety net for large product catalogs
   bool hasMorePages = true;
+
+  debugPrint('Starting to fetch all products from Shopify...');
 
   while (hasMorePages && attemptCount < maxAttempts) {
     attemptCount++;
-    debugPrint('Fetching page $attemptCount');
+    debugPrint('Fetching products page $attemptCount');
 
     try {
-      final params = {
+      final Map<String, String> params = {
         'limit': '250',
-        if (nextPageToken != null) 'page_info': nextPageToken,
       };
+
+      // Add pagination token if available
+      if (nextPageToken != null && nextPageToken.isNotEmpty) {
+        params['page_info'] = nextPageToken;
+      }
 
       final url = Uri.https(
         '$storeId.myshopify.com',
-        '/admin/api/2023-10/products.json',
+        '/admin/api/2024-07/products.json',
         params,
       );
+
+      debugPrint('Request URL: $url');
 
       final response = await http.get(
         url,
@@ -91,60 +105,95 @@ class ShopifyServices {
           'X-Shopify-Access-Token': adminAPIAcessToken!,
           'Content-Type': 'application/json',
         },
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 45));
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response headers: ${response.headers}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final products = data['products'] as List? ?? [];
         allProducts.addAll(products);
 
-        // Debug print to verify response
-        debugPrint('Fetched ${products.length} products');
-        debugPrint('Response headers: ${response.headers}');
+        debugPrint('Fetched ${products.length} products on page $attemptCount');
+        debugPrint('Total products so far: ${allProducts.length}');
 
-        // Check if there are more pages
+        // Check if there are more pages using Link header
         final linkHeader = response.headers['link'] ?? '';
+        debugPrint('Link header: $linkHeader');
+        
         hasMorePages = linkHeader.contains('rel="next"');
         
         if (hasMorePages) {
           nextPageToken = _extractNextPageToken(linkHeader);
           debugPrint('Next page token: $nextPageToken');
           
-          if (nextPageToken == null) {
-            debugPrint('Warning: Found next page marker but no token');
+          if (nextPageToken == null || nextPageToken.isEmpty) {
+            debugPrint('Warning: Found next page marker but no valid token');
             hasMorePages = false;
           } else {
-            await Future.delayed(const Duration(milliseconds: 500));
+            // Rate limiting - wait between requests
+            await Future.delayed(const Duration(milliseconds: 800));
           }
         } else {
           debugPrint('No more pages detected');
           nextPageToken = null;
         }
+      } else if (response.statusCode == 429) {
+        // Rate limit hit, wait longer
+        debugPrint('Rate limit hit, waiting 2 seconds...');
+        await Future.delayed(const Duration(seconds: 2));
+        continue; // Retry the same page
       } else {
-        throw Exception('API request failed with status ${response.statusCode}');
+        debugPrint('Error fetching products: ${response.statusCode} - ${response.body}');
+        // Don't break on error, try to continue with next page
+        hasMorePages = false;
       }
     } catch (e) {
-      throw Exception('Failed to fetch products: $e');
+      debugPrint('Error fetching products: $e');
+      // Don't break on error, try to continue
+      hasMorePages = false;
     }
   }
 
   if (attemptCount >= maxAttempts) {
-    debugPrint('Warning: Reached maximum attempts but may have more data');
+    debugPrint('Warning: Reached maximum attempts ($maxAttempts) but may have more data');
   }
 
+  debugPrint('Total products fetched: ${allProducts.length}');
+  debugPrint('Total pages processed: $attemptCount');
+  
   return allProducts;
 }
 
 String? _extractNextPageToken(String linkHeader) {
   try {
+    debugPrint('Extracting next page token from: $linkHeader');
+    
     // Handle both comma-separated links and single links
     final links = linkHeader.split(',');
     for (final link in links) {
+      debugPrint('Processing link: $link');
       if (link.contains('rel="next"')) {
-        final match = RegExp(r'page_info=([^&>]+)').firstMatch(link);
-        return match?.group(1);
+        // Try multiple regex patterns to extract the page_info parameter
+        final patterns = [
+          RegExp(r'page_info=([^&>]+)'),
+          RegExp(r'page_info=([^&>\s]+)'),
+          RegExp(r'[?&]page_info=([^&>]+)'),
+        ];
+        
+        for (final pattern in patterns) {
+          final match = pattern.firstMatch(link);
+          if (match != null) {
+            final token = match.group(1);
+            debugPrint('Found next page token: $token');
+            return token;
+          }
+        }
       }
     }
+    
+    debugPrint('No next page token found in link header');
     return null;
   } catch (e) {
     debugPrint('Error parsing link header: $e');
@@ -155,7 +204,7 @@ String? _extractNextPageToken(String linkHeader) {
   Future<List<dynamic>> getOrders() async {
     try {
       final response = await http.get( 
-        Uri.parse('https://$storeId.myshopify.com/admin/api/2023-10/orders.json'), // ?status=completed
+        Uri.parse('https://$storeId.myshopify.com/admin/api/2024-07/orders.json?limit=250'), // ?status=completed
         headers: {
           'X-Shopify-Access-Token': adminAPIAcessToken!,
           'Content-Type': 'application/json',
@@ -164,6 +213,9 @@ String? _extractNextPageToken(String linkHeader) {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print("++++++++++++++++++++++++++++++++++++++++++");
+        print("ordeeeeeeeeeeeeeeeeeeeeeeeeeers: ${data['orders'].length}");
+        print("++++++++++++++++++++++++++++++++++++++++++");
         return data['orders'];
       } else {
         print('Error fetching orders: ${response.statusCode}');
@@ -609,6 +661,358 @@ String? _extractNextPageToken(String linkHeader) {
     }
   }
 
+  /// Test function to check if we can fetch orders and compare methods
+  Future<Map<String, dynamic>> testOrderFetching(DateTime startDate, DateTime endDate) async {
+    try {
+      debugPrint('=== TESTING ORDER FETCHING ===');
+      debugPrint('Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+      
+      // Test the main method
+      debugPrint('Testing main method...');
+      final mainStart = DateTime.now();
+      final mainOrders = await _getPaidOrdersInDateRange(startDate, endDate);
+      final mainDuration = DateTime.now().difference(mainStart);
+      
+      // Test alternative method
+      debugPrint('Testing alternative method...');
+      final altStart = DateTime.now();
+      final altOrders = await getAllPaidOrdersAlternative(startDate, endDate);
+      final altDuration = DateTime.now().difference(altStart);
+      
+      // Test simple method without pagination
+      debugPrint('Testing simple method...');
+      final simpleStart = DateTime.now();
+      final simpleOrders = await _getSimpleOrders(startDate, endDate);
+      final simpleDuration = DateTime.now().difference(simpleStart);
+      
+      return {
+        'main_method': {
+          'orders_count': mainOrders.length,
+          'duration_ms': mainDuration.inMilliseconds,
+          'success': true,
+        },
+        'alternative_method': {
+          'orders_count': altOrders.length,
+          'duration_ms': altDuration.inMilliseconds,
+          'success': true,
+        },
+        'simple_method': {
+          'orders_count': simpleOrders.length,
+          'duration_ms': simpleDuration.inMilliseconds,
+          'success': true,
+        },
+        'comparison': {
+          'main_vs_alt': mainOrders.length == altOrders.length ? 'Match' : 'Different',
+          'main_vs_simple': mainOrders.length == simpleOrders.length ? 'Match' : 'Different',
+          'alt_vs_simple': altOrders.length == simpleOrders.length ? 'Match' : 'Different',
+        }
+      };
+    } catch (e) {
+      return {
+        'error': 'Test failed: $e',
+        'main_method': {'success': false, 'error': '$e'},
+        'alternative_method': {'success': false, 'error': '$e'},
+        'simple_method': {'success': false, 'error': '$e'},
+      };
+    }
+  }
+
+  /// Simple method to get products without complex pagination
+  Future<List<dynamic>> _getSimpleProducts() async {
+    try {
+      final url = Uri.https(
+        '$storeId.myshopify.com',
+        '/admin/api/2023-10/products.json',
+        {
+          'limit': '250',
+        },
+      );
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final products = data['products'] as List? ?? [];
+        debugPrint('Simple method: Fetched ${products.length} products');
+        return products;
+      } else {
+        debugPrint('Simple method: Error ${response.statusCode} - ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('Simple method: Error $e');
+      return [];
+    }
+  }
+
+  /// Test function to check if we can fetch products and compare methods
+  Future<Map<String, dynamic>> testProductFetching() async {
+    try {
+      debugPrint('=== TESTING PRODUCT FETCHING ===');
+      
+      // Test the main method
+      debugPrint('Testing main method...');
+      final mainStart = DateTime.now();
+      final mainProducts = await getAllProducts();
+      final mainDuration = DateTime.now().difference(mainStart);
+      
+      // Test alternative method
+      debugPrint('Testing alternative method...');
+      final altStart = DateTime.now();
+      final altProducts = await getAllProductsAlternative();
+      final altDuration = DateTime.now().difference(altStart);
+      
+      // Test simple method without pagination
+      debugPrint('Testing simple method...');
+      final simpleStart = DateTime.now();
+      final simpleProducts = await _getSimpleProducts();
+      final simpleDuration = DateTime.now().difference(simpleStart);
+      
+      // Test new comprehensive method
+      debugPrint('Testing comprehensive method...');
+      final compStart = DateTime.now();
+      final compProducts = await getAllProductsComprehensive();
+      final compDuration = DateTime.now().difference(compStart);
+      
+      return {
+        'main_method': {
+          'products_count': mainProducts.length,
+          'duration_ms': mainDuration.inMilliseconds,
+          'success': true,
+        },
+        'alternative_method': {
+          'products_count': altProducts.length,
+          'duration_ms': altDuration.inMilliseconds,
+          'success': true,
+        },
+        'simple_method': {
+          'products_count': simpleProducts.length,
+          'duration_ms': simpleDuration.inMilliseconds,
+          'success': true,
+        },
+        'comprehensive_method': {
+          'products_count': compProducts.length,
+          'duration_ms': compDuration.inMilliseconds,
+          'success': true,
+        },
+        'comparison': {
+          'main_vs_alt': mainProducts.length == altProducts.length ? 'Match' : 'Different',
+          'main_vs_simple': mainProducts.length == simpleProducts.length ? 'Match' : 'Different',
+          'alt_vs_simple': altProducts.length == simpleProducts.length ? 'Match' : 'Different',
+          'comp_vs_main': compProducts.length == mainProducts.length ? 'Match' : 'Different',
+          'comp_vs_alt': compProducts.length == altProducts.length ? 'Match' : 'Different',
+        }
+      };
+    } catch (e) {
+      return {
+        'error': 'Test failed: $e',
+        'main_method': {'success': false, 'error': '$e'},
+        'alternative_method': {'success': false, 'error': '$e'},
+        'simple_method': {'success': false, 'error': '$e'},
+        'comprehensive_method': {'success': false, 'error': '$e'},
+      };
+    }
+  }
+
+  /// Comprehensive method to get all products using page-based pagination
+  Future<List<dynamic>> getAllProductsComprehensive() async {
+    final List<dynamic> allProducts = [];
+    int page = 1;
+    const int maxPages = 500; // Very high limit
+    bool hasMoreData = true;
+
+    debugPrint('Comprehensive method: Starting to fetch all products...');
+
+    while (hasMoreData && page <= maxPages) {
+      debugPrint('Comprehensive method: Fetching page $page');
+
+      try {
+        // Use page-based pagination instead of cursor-based
+        final Map<String, String> params = {
+          'limit': '250',
+          'page': page.toString(),
+        };
+
+        final url = Uri.https(
+          '$storeId.myshopify.com',
+          '/admin/api/2023-10/products.json',
+          params,
+        );
+
+        debugPrint('Comprehensive method: Request URL: $url');
+
+        final response = await http.get(
+          url,
+          headers: {
+            'X-Shopify-Access-Token': adminAPIAcessToken!,
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 60));
+
+        debugPrint('Comprehensive method: Response status: ${response.statusCode}');
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final products = data['products'] as List? ?? [];
+          
+          if (products.isEmpty) {
+            debugPrint('Comprehensive method: No more products found on page $page');
+            hasMoreData = false;
+            break;
+          }
+          
+          allProducts.addAll(products);
+          debugPrint('Comprehensive method: Fetched [32m${products.length}[0m products on page $page');
+          debugPrint('Comprehensive method: Total products so far: ${allProducts.length}');
+
+          // Check if we got less than the limit (indicates last page)
+          if (products.length < 250) {
+            debugPrint('Comprehensive method: Got less than 250 products, likely last page');
+            hasMoreData = false;
+          }
+
+          page++;
+          await Future.delayed(const Duration(milliseconds: 1000)); // Longer delay
+        } else if (response.statusCode == 429) {
+          debugPrint('Comprehensive method: Rate limit hit, waiting 3 seconds...');
+          await Future.delayed(const Duration(seconds: 3));
+          continue; // Retry the same page
+        } else {
+          debugPrint('Comprehensive method: Error ${response.statusCode} - ${response.body}');
+          hasMoreData = false;
+        }
+      } catch (e) {
+        debugPrint('Comprehensive method: Error on page $page: $e');
+        hasMoreData = false;
+      }
+    }
+
+    debugPrint('Comprehensive method: Total products fetched: ${allProducts.length}');
+    debugPrint('Comprehensive method: Total pages processed: ${page - 1}');
+    
+    return allProducts;
+  }
+
+  /// Get products count to verify we're getting all products
+  Future<int> getProductsCount() async {
+    try {
+      final url = Uri.https(
+        '$storeId.myshopify.com',
+        '/admin/api/2023-10/products/count.json',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final count = data['count'] as int? ?? 0;
+        debugPrint('Total products count from API: $count');
+        return count;
+      } else {
+        debugPrint('Error getting products count: ${response.statusCode} - ${response.body}');
+        return 0;
+      }
+    } catch (e) {
+      debugPrint('Error getting products count: $e');
+      return 0;
+    }
+  }
+
+  /// Debug function to analyze pagination headers
+  Future<Map<String, dynamic>> debugPagination() async {
+    try {
+      debugPrint('=== DEBUGGING PAGINATION ===');
+      
+      final url = Uri.https(
+        '$storeId.myshopify.com',
+        '/admin/api/2023-10/products.json',
+        {'limit': '10'}, // Small limit to see pagination clearly
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('All headers: ${response.headers}');
+      
+      final linkHeader = response.headers['link'] ?? '';
+      debugPrint('Link header: $linkHeader');
+      
+      final data = json.decode(response.body);
+      final products = data['products'] as List? ?? [];
+      
+      return {
+        'status_code': response.statusCode,
+        'products_count': products.length,
+        'link_header': linkHeader,
+        'has_next': linkHeader.contains('rel="next"'),
+        'has_prev': linkHeader.contains('rel="prev"'),
+        'all_headers': response.headers.toString(),
+      };
+    } catch (e) {
+      return {
+        'error': 'Debug failed: $e',
+      };
+    }
+  }
+
+  /// Simple method to get orders without complex pagination
+  Future<List<dynamic>> _getSimpleOrders(DateTime startDate, DateTime endDate) async {
+    try {
+      final startDateStr = startDate.toUtc().toIso8601String();
+      final endDateStr = endDate.toUtc().toIso8601String();
+      
+      final url = Uri.https(
+        '$storeId.myshopify.com',
+        '/admin/api/2023-10/orders.json',
+        {
+          'limit': '250',
+          'financial_status': 'paid',
+          'created_at_min': startDateStr,
+          'created_at_max': endDateStr,
+        },
+      );
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 30));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final orders = data['orders'] as List? ?? [];
+        debugPrint('Simple method: Fetched ${orders.length} orders');
+        return orders;
+      } else {
+        debugPrint('Simple method: Error ${response.statusCode} - ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('Simple method: Error $e');
+      return [];
+    }
+  }
+
   /// Test refund process without actually creating a refund
   Future<Map<String, dynamic>> testRefundProcess(int orderId) async {
     try {
@@ -860,6 +1264,496 @@ String? _extractNextPageToken(String linkHeader) {
         'error': 'Test refund failed: $e'
       };
     }
+  }
+
+  /// Get all paid orders for today
+  Future<List<dynamic>> getPaidOrdersToday() async {
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1)).subtract(const Duration(milliseconds: 1));
+      
+      return await getPaidOrdersInDateRange(startOfDay, endOfDay);
+    } catch (e) {
+      debugPrint('Error fetching today\'s paid orders: $e');
+      return [];
+    }
+  }
+
+  /// Get all paid orders for this week (Monday to Sunday)
+  Future<List<dynamic>> getPaidOrdersThisWeek() async {
+    try {
+      final now = DateTime.now();
+      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final startOfWeekDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      final endOfWeek = startOfWeekDay.add(const Duration(days: 7)).subtract(const Duration(milliseconds: 1));
+      
+      return await getPaidOrdersInDateRange(startOfWeekDay, endOfWeek);
+    } catch (e) {
+      debugPrint('Error fetching this week\'s paid orders: $e');
+      return [];
+    }
+  }
+
+  /// Get all paid orders for this month
+  Future<List<dynamic>> getPaidOrdersThisMonth() async {
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      
+      final endOfMonth = DateTime(now.year, now.month + 1, 1).subtract(const Duration(milliseconds: 1));
+      
+
+      return await getPaidOrdersInDateRange(startOfMonth, endOfMonth);
+    } catch (e) {
+      debugPrint('Error fetching this month\'s paid orders: $e');
+      return [];
+    }
+  }
+
+  /// Get all paid orders for the last 3 months
+  Future<List<dynamic>> getPaidOrdersLastThreeMonths() async {
+    try {
+      final now = DateTime.now();
+      final startDate = DateTime(now.year, now.month - 3, 1);
+      final endDate = DateTime(now.year, now.month + 1, 1).subtract(const Duration(milliseconds: 1));
+      
+      return await getPaidOrdersInDateRange(startDate, endDate);
+    } catch (e) {
+      debugPrint('Error fetching last 3 months\' paid orders: $e');
+      return [];
+    }
+  }
+
+  /// Get all paid orders within a custom date range
+  Future<List<dynamic>> getPaidOrdersInCustomRange(DateTime startDate, DateTime endDate) async {
+    try {
+      // Normalize dates to start and end of day
+      final normalizedStartDate = DateTime(startDate.year, startDate.month, startDate.day);
+      final normalizedEndDate = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
+      
+      return await getPaidOrdersInDateRange(normalizedStartDate, normalizedEndDate);
+    } catch (e) {
+      debugPrint('Error fetching paid orders in custom range: $e');
+      return [];
+    }
+  }
+
+  /// Alternative method to get all products using cursor-based pagination
+  Future<List<dynamic>> getAllProductsAlternative() async {
+    final List<dynamic> allProducts = [];
+    String? cursor;
+    int pageCount = 0;
+    const int maxPages = 200; // Safety limit
+
+    debugPrint('Alternative method: Starting to fetch all products from Shopify...');
+
+    while (pageCount < maxPages) {
+      pageCount++;
+      debugPrint('Alternative method: Fetching products page $pageCount');
+
+      try {
+        final Map<String, String> params = {
+          'limit': '250',
+        };
+
+        if (cursor != null && cursor.isNotEmpty) {
+          params['cursor'] = cursor;
+        }
+
+        final url = Uri.https(
+          '$storeId.myshopify.com',
+          '/admin/api/2023-10/products.json',
+          params,
+        );
+
+        final response = await http.get(
+          url,
+          headers: {
+            'X-Shopify-Access-Token': adminAPIAcessToken!,
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 45));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final products = data['products'] as List? ?? [];
+          
+          if (products.isEmpty) {
+            debugPrint('Alternative method: No more products found');
+            break;
+          }
+          
+          allProducts.addAll(products);
+          debugPrint('Alternative method: Fetched ${products.length} products on page $pageCount');
+          debugPrint('Alternative method: Total products so far: ${allProducts.length}');
+
+          // Check for next page cursor
+          final linkHeader = response.headers['link'] ?? '';
+          if (linkHeader.contains('rel="next"')) {
+            final nextMatch = RegExp(r'cursor=([^&>]+)').firstMatch(linkHeader);
+            cursor = nextMatch?.group(1);
+            debugPrint('Alternative method: Next cursor: $cursor');
+            
+            if (cursor == null || cursor.isEmpty) {
+              debugPrint('Alternative method: No valid cursor found, stopping');
+              break;
+            }
+            
+            await Future.delayed(const Duration(milliseconds: 800));
+          } else {
+            debugPrint('Alternative method: No more pages detected');
+            break;
+          }
+        } else if (response.statusCode == 429) {
+          debugPrint('Alternative method: Rate limit hit, waiting...');
+          await Future.delayed(const Duration(seconds: 2));
+          continue;
+        } else {
+          debugPrint('Alternative method: Error ${response.statusCode} - ${response.body}');
+          break;
+        }
+      } catch (e) {
+        debugPrint('Alternative method: Error $e');
+        break;
+      }
+    }
+
+    debugPrint('Alternative method: Total products fetched: ${allProducts.length}');
+    return allProducts;
+  }
+
+  /// Alternative method to get all paid orders using cursor-based pagination
+  Future<List<dynamic>> getAllPaidOrdersAlternative(DateTime startDate, DateTime endDate) async {
+    final List<dynamic> allOrders = [];
+    String? cursor;
+    int pageCount = 0;
+    const int maxPages = 200; // Safety limit
+
+    // Format dates for Shopify API
+    final startDateStr = startDate.toUtc().toIso8601String();
+    final endDateStr = endDate.toUtc().toIso8601String();
+
+    debugPrint('Alternative method: Fetching paid orders from $startDateStr to $endDateStr');
+
+    while (pageCount < maxPages) {
+      pageCount++;
+      debugPrint('Alternative method: Fetching page $pageCount');
+
+      try {
+        final Map<String, String> params = {
+          'limit': '250',
+          'financial_status': 'paid',
+          'created_at_min': startDateStr,
+          'created_at_max': endDateStr,
+        };
+
+        if (cursor != null && cursor.isNotEmpty) {
+          params['cursor'] = cursor;
+        }
+
+        final url = Uri.https(
+          '$storeId.myshopify.com',
+          '/admin/api/2023-10/orders.json',
+          params,
+        );
+
+        final response = await http.get(
+          url,
+          headers: {
+            'X-Shopify-Access-Token': adminAPIAcessToken!,
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 45));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final orders = data['orders'] as List? ?? [];
+          
+          if (orders.isEmpty) {
+            debugPrint('Alternative method: No more orders found');
+            break;
+          }
+          
+          allOrders.addAll(orders);
+          debugPrint('Alternative method: Fetched ${orders.length} orders on page $pageCount');
+          debugPrint('Alternative method: Total orders so far: ${allOrders.length}');
+
+          // Check for next page cursor
+          final linkHeader = response.headers['link'] ?? '';
+          if (linkHeader.contains('rel="next"')) {
+            final nextMatch = RegExp(r'cursor=([^&>]+)').firstMatch(linkHeader);
+            cursor = nextMatch?.group(1);
+            debugPrint('Alternative method: Next cursor: $cursor');
+            
+            if (cursor == null || cursor.isEmpty) {
+              debugPrint('Alternative method: No valid cursor found, stopping');
+              break;
+            }
+            
+            await Future.delayed(const Duration(milliseconds: 800));
+          } else {
+            debugPrint('Alternative method: No more pages detected');
+            break;
+          }
+        } else if (response.statusCode == 429) {
+          debugPrint('Alternative method: Rate limit hit, waiting...');
+          await Future.delayed(const Duration(seconds: 2));
+          continue;
+        } else {
+          debugPrint('Alternative method: Error ${response.statusCode} - ${response.body}');
+          break;
+        }
+      } catch (e) {
+        debugPrint('Alternative method: Error $e');
+        break;
+      }
+    }
+
+    debugPrint('Alternative method: Total orders fetched: ${allOrders.length}');
+    return allOrders;
+  }
+
+  /// Helper function to get paid orders within a date range with pagination
+  Future<List<dynamic>> _getPaidOrdersInDateRange(DateTime startDate, DateTime endDate) async {
+    final List<dynamic> allOrders = [];
+    String? nextPageToken;
+    int attemptCount = 0;
+    const int maxAttempts = 100; // Increased safety net for large date ranges
+    bool hasMorePages = true;
+
+    // Format dates for Shopify API (ISO 8601 format with timezone)
+    final startDateStr = startDate.toUtc().toIso8601String();
+    final endDateStr = endDate.toUtc().toIso8601String();
+
+    debugPrint('Fetching paid orders from $startDateStr to $endDateStr');
+
+    while (hasMorePages && attemptCount < maxAttempts) {
+      attemptCount++;
+      debugPrint('Fetching page $attemptCount');
+
+      try {
+        final Map<String, String> params = {
+          'limit': '250',
+          //'financial_status': 'paid', // Only paid orders
+          'created_at_min': startDateStr,
+          'created_at_max': endDateStr,
+        };
+
+        // Add pagination token if available
+        if (nextPageToken != null && nextPageToken.isNotEmpty) {
+          params['page_info'] = nextPageToken;
+        }
+
+        final url = Uri.https(
+          '$storeId.myshopify.com',
+          '/admin/api/2023-10/orders.json',
+          params,
+        );
+
+        debugPrint('Request URL: $url');
+
+        final response = await http.get(
+          url,
+          headers: {
+            'X-Shopify-Access-Token': adminAPIAcessToken!,
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 45));
+
+        debugPrint('Response status: ${response.statusCode}');
+        debugPrint('Response headers: ${response.headers}');
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final orders = data['orders'] as List? ?? [];
+          allOrders.addAll(orders);
+
+          debugPrint('Fetched ${orders.length} orders on page $attemptCount');
+          debugPrint('Total orders so far: ${allOrders.length}');
+
+          // Check if there are more pages using Link header
+          final linkHeader = response.headers['link'] ?? '';
+          debugPrint('Link header: $linkHeader');
+          
+          hasMorePages = linkHeader.contains('rel="next"');
+          
+          if (hasMorePages) {
+            nextPageToken = _extractNextPageToken(linkHeader);
+            debugPrint('Next page token: $nextPageToken');
+            
+            if (nextPageToken == null || nextPageToken.isEmpty) {
+              debugPrint('Warning: Found next page marker but no valid token');
+              hasMorePages = false;
+            } else {
+              // Rate limiting - wait between requests
+              await Future.delayed(const Duration(milliseconds: 800));
+            }
+          } else {
+            debugPrint('No more pages detected');
+            nextPageToken = null;
+          }
+        } else if (response.statusCode == 429) {
+          // Rate limit hit, wait longer
+          debugPrint('Rate limit hit, waiting 2 seconds...');
+          await Future.delayed(const Duration(seconds: 2));
+          continue; // Retry the same page
+        } else {
+          debugPrint('Error fetching orders: ${response.statusCode} - ${response.body}');
+          // Don't break on error, try to continue with next page
+          hasMorePages = false;
+        }
+      } catch (e) {
+        debugPrint('Error fetching orders in date range: $e');
+        // Don't break on error, try to continue
+        hasMorePages = false;
+      }
+    }
+
+    if (attemptCount >= maxAttempts) {
+      debugPrint('Warning: Reached maximum attempts ($maxAttempts) but may have more data');
+    }
+
+    debugPrint('Total orders fetched: ${allOrders.length}');
+    debugPrint('Total pages processed: $attemptCount');
+
+    print("++++++++++++++++++++++++++++++++++++++++++");
+    print("all ordeeeeeeeeeeeeeeeeeeeeeeeeeers: ${allOrders.length}");
+    print("++++++++++++++++++++++++++++++++++++++++++");
+    
+    return allOrders;
+  }
+
+  Future<List> getPaidOrdersInDateRange(
+    DateTime fromDate,
+    DateTime toDate,
+  ) async {
+    print("startttttttttttttttttttttttttttOfMonth: $fromDate");
+    print("enddddddddddddddddddddddddddddOfMonth: $toDate");
+    String isoFrom = fromDate.toUtc().toIso8601String();
+    String isoTo = toDate.toUtc().toIso8601String();
+
+    String baseUrl =
+        'https://$storeId.myshopify.com/admin/api/2024-07/orders.json'
+        '?status=closed'
+        '&created_at_min=$isoFrom'
+        '&created_at_max=$isoTo'
+        '&limit=250';
+
+    List<Map<String, dynamic>> allOrders = [];
+    String? nextPageUrl = baseUrl;
+
+    while (nextPageUrl != null) {
+      final response = await http.get(
+        Uri.parse(nextPageUrl),
+        headers: {
+          'X-Shopify-Access-Token': adminAPIAcessToken!,
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final orders = List<Map<String, dynamic>>.from(data['orders']);
+        allOrders.addAll(orders);
+
+        // Check for pagination
+        String? linkHeader = response.headers['link'];
+        if (linkHeader != null && linkHeader.contains('rel="next"')) {
+          final match = RegExp(r'<([^>]+)>; rel="next"').firstMatch(linkHeader);
+          nextPageUrl = match?.group(1);
+        } else {
+          nextPageUrl = null;
+        }
+      } else {
+        print('Error fetching orders: ${response.statusCode} - ${response.body}');
+        break;
+      }
+    }
+
+    print('✅ Totaaaaaaaaaaal paid orders fetched: ${allOrders.length}');
+    // You can process or return the `allOrders` list here
+    return allOrders;
+  }
+
+  /// Get summary statistics for paid orders in a date range
+  Future<Map<String, dynamic>> getPaidOrdersSummary(DateTime startDate, DateTime endDate) async {
+    try {
+      final orders = await getPaidOrdersInCustomRange(startDate, endDate);
+      
+      double totalRevenue = 0;
+      int totalOrders = orders.length;
+      int totalItems = 0;
+      Map<String, int> productCounts = {};
+      
+      for (final order in orders) {
+        final totalPrice = double.tryParse(order['total_price']?.toString() ?? '0') ?? 0;
+        totalRevenue += totalPrice;
+        
+        final lineItems = order['line_items'] as List? ?? [];
+        for (final item in lineItems) {
+          final quantity = item['quantity'] as int? ?? 0;
+          totalItems += quantity;
+          
+          final productTitle = item['title']?.toString() ?? 'Unknown Product';
+          productCounts[productTitle] = (productCounts[productTitle] ?? 0) + quantity;
+        }
+      }
+      
+      // Sort products by quantity sold
+      final sortedProducts = productCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      
+      return {
+        'total_orders': totalOrders,
+        'total_revenue': totalRevenue,
+        'total_items_sold': totalItems,
+        'average_order_value': totalOrders > 0 ? totalRevenue / totalOrders : 0,
+        'top_products': sortedProducts.take(10).map((e) => {
+          'product': e.key,
+          'quantity_sold': e.value,
+        }).toList(),
+        'date_range': {
+          'start': startDate.toIso8601String(),
+          'end': endDate.toIso8601String(),
+        }
+      };
+    } catch (e) {
+      debugPrint('Error getting paid orders summary: $e');
+      return {
+        'error': 'Failed to get summary: $e',
+        'total_orders': 0,
+        'total_revenue': 0,
+        'total_items_sold': 0,
+        'average_order_value': 0,
+        'top_products': [],
+      };
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getProductSellsInDateRange({
+    required int productShopifyId,
+    required DateTime fromDate,
+    required DateTime toDate,
+  }) async {
+    List<Map<String, dynamic>> allOrders = [];
+    List<Map<String, dynamic>> productOrders = [];
+
+    // Fetch all paid orders in the date range
+    final orders = await getPaidOrdersInDateRange(fromDate, toDate);
+
+    // Filter orders that contain the specific product
+    for (final order in orders) {
+      final lineItems = order['line_items'] as List? ?? [];
+      for (final item in lineItems) {
+        if (item['product_id'] == productShopifyId) {
+          productOrders.add(order);
+          break;
+        }
+      }
+    }
+
+    return productOrders;
   }
 }
 

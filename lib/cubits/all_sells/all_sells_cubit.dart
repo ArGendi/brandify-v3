@@ -68,7 +68,7 @@ class AllSellsCubit extends Cubit<AllSellsState> {
     return sellsFromDB;
   }
 
-  Future<void> getSells({int expenses = 0, List<Product>? allProducts}) async{
+  Future<void> getSells({int expenses = 0, List<Product>? allProducts, OrderDate? orderDate}) async{
     //if(sells.isNotEmpty) return;
     List<Sell> temp = List.from(sells);
     sells = [];
@@ -86,12 +86,14 @@ class AllSellsCubit extends Cubit<AllSellsState> {
           sells = await getSellsFromDB();
         },
         shopify: () async{
-          List shopifySells = await ShopifyServices().getOrders();
+          List shopifySells = await ShopifyServices().getOrders();   
+          
           for(var one in shopifySells){
             Sell newSell = Sell.fromShopifyOrder(one, allProducts ?? []);
             sells.add(newSell);
             print(sells);
           }
+          print('✅ Totaaaaaaaaaaal selllllllllllllllls: ${sells.length}');
           var response = await SellsServices().getSells();
           if(response.status == Status.success){
             sells.addAll(response.data);
@@ -106,6 +108,54 @@ class AllSellsCubit extends Cubit<AllSellsState> {
       emit(SuccessAllSellsState());
     }
     
+  }
+
+  Future<void> getSellsInDateRange(DateTime fromDate, DateTime toDate, {int expenses = 0, List<Product>? allProducts}) async {
+    //List<Sell> temp = List.from(sells);
+    sells = [];
+
+    try {
+      emit(LoadingAllSellsState());
+      await Package.checkAccessability(
+        online: () async {
+          var response = await SellsServices().getSellsInDateRange(fromDate, toDate);
+          print("sells status: ${response.status} : ${response.data}");
+          if (response.status == Status.success) {
+            sells = response.data;
+          }
+        },
+        offline: () async {
+          sells = await getSellsFromDB();
+          // Filter sells by date range from local storage
+          sells = sells.where((sell) {
+            if (sell.date == null) return false;
+            return sell.date!.isAfter(fromDate.subtract(const Duration(days: 1))) && 
+                   sell.date!.isBefore(toDate.add(const Duration(days: 1)));
+          }).toList();
+        },
+        shopify: () async {
+          // Get Shopify orders in date range
+          List shopifySells = await ShopifyServices().getPaidOrdersInDateRange(fromDate, toDate);
+          
+          for (var one in shopifySells) {
+            Sell newSell = Sell.fromShopifyOrder(one, allProducts ?? []);
+            sells.add(newSell);
+          }
+          print('✅ Total Shopify sells in date range: ${sells.length}');
+          
+          // Get local sells in date range
+          var response = await SellsServices().getSellsInDateRange(fromDate, toDate);
+          if (response.status == Status.success) {
+            sells.addAll(response.data);
+          }
+        },
+      );
+      _calculateTotals(expenses);
+      emit(SuccessAllSellsState());
+    } catch (e) {
+      //sells = List.from(temp);
+      emit(FailAllSellsState());
+    }
   }
 
   void deductFromProfit(int value){
@@ -142,7 +192,7 @@ class AllSellsCubit extends Cubit<AllSellsState> {
   }
 
   Future<void> _processRefund(BuildContext context, Sell targetSell) async {
-    print("${targetSell.product?.id} : ${targetSell.size?.toJson()}");
+    print("${targetSell.product?.backendId} : ${targetSell.size?.toJson()}");
     dynamic id;
     await Package.checkAccessability(
       online: () async {
@@ -156,7 +206,7 @@ class AllSellsCubit extends Cubit<AllSellsState> {
         id = targetSell.product?.shopifyId ?? targetSell.product?.backendId;
       }
     );
-    Product? refundedProduct = ProductsCubit.get(context).refundProduct(
+    Product? refundedProduct = await ProductsCubit.get(context).refundProduct(
       id,
       targetSell.size!,
       targetSell.quantity ?? 0,

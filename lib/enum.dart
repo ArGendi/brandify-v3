@@ -28,3 +28,13 @@ enum RegisterStatus{
   backendError,
   missingParameters,
 }
+
+enum OrderDate{
+  Today,
+  Week,
+  Month,
+  ThreeMonths,
+  SixMonths,
+  Year,
+  AllTime,
+}
