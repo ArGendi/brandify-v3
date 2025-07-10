@@ -32,9 +32,12 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    OneProductSellsCubit.get(context).getAllSellsOfProduct(
-      AllSellsCubit.get(context).sells, 
+    var now = DateTime.now();
+    OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
       widget.product,
+      now.subtract(Duration(days: 30)),
+      now,
+      isFirstTime: true,
     );
   }
 
@@ -72,7 +75,8 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                         title: Text(AppLocalizations.of(context)!.today),
                         onTap: () {
                           Navigator.pop(context);
-                          OneProductSellsCubit.get(context).filterByDate(
+                          OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
+                            widget.product,
                             DateTime.now(),
                             DateTime.now(),
                           );
@@ -83,11 +87,17 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                         title: Text(AppLocalizations.of(context)!.thisWeek),
                         onTap: () {
                           final now = DateTime.now();
-                          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                          OneProductSellsCubit.get(context).filterByDate(
+                          final startOfWeek = now.subtract(Duration(days: 7));
+                          OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
+                            widget.product,
                             startOfWeek,
                             now,
                           );
+                          // OneProductSellsCubit.get(context).filterByDate(
+                          //   startOfWeek,
+                          //   now,
+                          // );
+                          
                           Navigator.pop(context);
                         },
                       ),
@@ -96,11 +106,16 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                         title: Text(AppLocalizations.of(context)!.thisMonth),
                         onTap: () {
                           final now = DateTime.now();
-                          final startOfMonth = DateTime(now.year, now.month, 1);
-                          OneProductSellsCubit.get(context).filterByDate(
+                          final startOfMonth = now.subtract(Duration(days: 30));
+                          OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
+                            widget.product,
                             startOfMonth,
                             now,
                           );
+                          // OneProductSellsCubit.get(context).filterByDate(
+                          //   startOfMonth,
+                          //   now,
+                          // );
                           Navigator.pop(context);
                         },
                       ),
@@ -108,7 +123,7 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                         leading: Icon(Icons.date_range),
                         title: Text(AppLocalizations.of(context)!.customRange),
                         onTap: () async {
-                          Navigator.pop(context);
+                          //Navigator.pop(context);
                           final DateTimeRange? picked = await showDateRangePicker(
                             context: context,
                             firstDate: DateTime(2020),
@@ -119,10 +134,12 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                             ),
                           );
                           if (picked != null) {
-                            OneProductSellsCubit.get(context).filterByDate(
+                            OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
+                              widget.product,
                               picked.start,
                               picked.end,
                             );
+                            Navigator.pop(context);
                           }
                         },
                       ),
@@ -146,6 +163,9 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
         padding: const EdgeInsets.all(20.0),
         child: BlocBuilder<OneProductSellsCubit, OneProductSellsState>(
           builder: (context, state) {
+            if (state is OneProductSellsChangedState) {
+              return const Center(child: CircularProgressIndicator());
+            }
             var sells = OneProductSellsCubit.get(context).filteredSells;
             return Visibility(
               visible: sells.isNotEmpty,
@@ -177,7 +197,9 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "(${sells[i].quantity}) ${sells[i].product!.name}",
+                                "(${sells[i].quantity}) ${sells[i].product?.name}",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     decoration: sells[i].isRefunded
                                         ? TextDecoration.lineThrough
@@ -249,7 +271,7 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                                 ),
                               )
                             : Text(
-                                AppLocalizations.of(context)!.refundButton,
+                                AppLocalizations.of(context)!.refunded,
                                 style: TextStyle(
                                   color: Colors.red,
                                 ),
@@ -290,97 +312,97 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
     }
   }
 
-  void showFilterBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.filterByDate,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 20),
-            ListTile(
-              leading: Icon(Icons.today),
-              title: Text(AppLocalizations.of(context)!.today),
-              onTap: () {
-                Navigator.pop(context);
-                OneProductSellsCubit.get(context).filterByDate(
-                  DateTime.now(),
-                  DateTime.now(),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.calendar_view_week),
-              title: Text(AppLocalizations.of(context)!.thisWeek),
-              onTap: () {
-                final now = DateTime.now();
-                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                OneProductSellsCubit.get(context).filterByDate(
-                  startOfWeek,
-                  now,
-                );
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.calendar_month),
-              title: Text(AppLocalizations.of(context)!.thisMonth),
-              onTap: () {
-                final now = DateTime.now();
-                final startOfMonth = DateTime(now.year, now.month, 1);
-                OneProductSellsCubit.get(context).filterByDate(
-                  startOfMonth,
-                  now,
-                );
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.date_range),
-              title: Text(AppLocalizations.of(context)!.customRange),
-              onTap: () async {
-                Navigator.pop(context);
-                final DateTimeRange? picked = await showDateRangePicker(
-                  context: context,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  initialDateRange: DateTimeRange(
-                    start: DateTime.now().subtract(Duration(days: 7)),
-                    end: DateTime.now(),
-                  ),
-                );
-                if (picked != null) {
-                  OneProductSellsCubit.get(context).filterByDate(
-                    picked.start,
-                    picked.end,
-                  );
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.clear_all),
-              title: Text(AppLocalizations.of(context)!.clearFilter),
-              onTap: () {
-                Navigator.pop(context);
-                OneProductSellsCubit.get(context).clearFilter();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // void showFilterBottomSheet(BuildContext context) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //     ),
+  //     builder: (context) => Container(
+  //       padding: EdgeInsets.all(20),
+  //       child: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           Text(
+  //             AppLocalizations.of(context)!.filterByDate,
+  //             style: TextStyle(
+  //               fontSize: 20,
+  //               fontWeight: FontWeight.bold,
+  //             ),
+  //           ),
+  //           SizedBox(height: 20),
+  //           ListTile(
+  //             leading: Icon(Icons.today),
+  //             title: Text(AppLocalizations.of(context)!.today),
+  //             onTap: () {
+  //               Navigator.pop(context);
+  //               OneProductSellsCubit.get(context).filterByDate(
+  //                 DateTime.now(),
+  //                 DateTime.now(),
+  //               );
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: Icon(Icons.calendar_view_week),
+  //             title: Text(AppLocalizations.of(context)!.thisWeek),
+  //             onTap: () {
+  //               final now = DateTime.now();
+  //               final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+  //               OneProductSellsCubit.get(context).filterByDate(
+  //                 startOfWeek,
+  //                 now,
+  //               );
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: Icon(Icons.calendar_month),
+  //             title: Text(AppLocalizations.of(context)!.thisMonth),
+  //             onTap: () {
+  //               final now = DateTime.now();
+  //               final startOfMonth = DateTime(now.year, now.month, 1);
+  //               OneProductSellsCubit.get(context).filterByDate(
+  //                 startOfMonth,
+  //                 now,
+  //               );
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: Icon(Icons.date_range),
+  //             title: Text(AppLocalizations.of(context)!.customRange),
+  //             onTap: () async {
+  //               Navigator.pop(context);
+  //               final DateTimeRange? picked = await showDateRangePicker(
+  //                 context: context,
+  //                 firstDate: DateTime(2020),
+  //                 lastDate: DateTime.now(),
+  //                 initialDateRange: DateTimeRange(
+  //                   start: DateTime.now().subtract(Duration(days: 7)),
+  //                   end: DateTime.now(),
+  //                 ),
+  //               );
+  //               if (picked != null) {
+  //                 OneProductSellsCubit.get(context).filterByDate(
+  //                   picked.start,
+  //                   picked.end,
+  //                 );
+  //               }
+  //             },
+  //           ),
+  //           ListTile(
+  //             leading: Icon(Icons.clear_all),
+  //             title: Text(AppLocalizations.of(context)!.clearFilter),
+  //             onTap: () {
+  //               Navigator.pop(context);
+  //               OneProductSellsCubit.get(context).clearFilter();
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
   void showDetailsAlertDialog(BuildContext context, Sell sell) {
   showModalBottomSheet(
     context: context,
@@ -420,12 +442,7 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
           SellInfo(sell: sell),
           SizedBox(height: 20),
           if (!sell.isRefunded)
-          sell.shopifyId != null? CustomButton(
-                text: AppLocalizations.of(context)!.refundInShopify,
-                onPressed: () {
-                  _openShopifyOrder(context, sell.shopifyId!);
-                },
-              ):
+          sell.shopifyId != null? Container():
             BlocBuilder<AllSellsCubit, AllSellsState>(
               builder: (context, state) {
                 if (state is LoadingRefundSellsState) {
@@ -436,6 +453,7 @@ class _OneProductSellsScreenState extends State<OneProductSellsScreen> {
                 return CustomButton(
                   bgColor: Colors.red,
                   onPressed: () async{
+                    context.read<AllSellsCubit>().sells = context.read<OneProductSellsCubit>().filteredSells;
                     await AllSellsCubit.get(context).refund(context, sell);
                     navigatorKey.currentState?..pop()..pop();
                   },

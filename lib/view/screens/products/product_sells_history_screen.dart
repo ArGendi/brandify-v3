@@ -23,9 +23,11 @@ class _ProductSellsHistoryScreenState extends State<ProductSellsHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    OneProductSellsCubit.get(context).getAllSellsOfProduct(
-      AllSellsCubit.get(context).sells,
-      widget.product
+    var now = DateTime.now();
+    OneProductSellsCubit.get(context).getAllSellsOfProductInDateRange(
+      widget.product,
+      now.subtract(Duration(days: 30)),
+      now
     );
   }
 

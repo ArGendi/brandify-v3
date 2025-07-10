@@ -34,6 +34,7 @@ class AppUserCubit extends Cubit<AppUserState> {
   String? email;
   bool isLoggedInNow = false;
   DateTime? createdAt;
+  bool isLoading = false;
 
   AppUserCubit() : super(AppUserInitial());
 
@@ -332,6 +333,7 @@ class AppUserCubit extends Cubit<AppUserState> {
       totalOrders = 0;
       brandName = null;
       brandPhone = null;
+      ShopifyServices.clearValues();
       emit(AppUserSuccess());
       _navigateToLogin(context);
     } catch (e) {
@@ -535,6 +537,11 @@ class AppUserCubit extends Cubit<AppUserState> {
         }
 
         if(Package.type == PackageType.shopify){
+          ShopifyServices.setParamters(
+            newAdminAcessToken: userData["adminAPIAcessToken"],
+            newStoreId: userData["storeId"],
+            newLocationId: userData["locationId"],
+          );
           emit(AppUserDataValuesLoading());
         }
         else{
@@ -605,13 +612,18 @@ class AppUserCubit extends Cubit<AppUserState> {
     total = newTotal;
     totalProfit = newProfit;
     totalOrders = newTotalOrders ?? 0;
-    emit(AppUserLoaded());
+    emit(TotalAndProfitUpdatedState());
   }
 
   Future<void> changePassword(String newPassword) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('No user logged in');
     await user.updatePassword(newPassword);
+  }
+
+  void setIsLoading(bool value){
+    isLoading = value;
+    emit(AppUserSuccess());
   }
 }
 

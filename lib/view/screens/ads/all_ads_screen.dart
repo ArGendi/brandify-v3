@@ -25,9 +25,10 @@ class _AllAdsScreenState extends State<AllAdsScreen> {
   @override
   void initState() {
     super.initState();
-    AdsCubit.get(context).getAllAds().then((_) {
-      AdsCubit.get(context).sortAdsByDate(descending: true);
-    });
+    if(context.mounted){
+      AdsCubit.get(context).getAllAds();
+    }
+    
   }
 
   Future<void> _selectDateRange() async {

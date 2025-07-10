@@ -161,7 +161,14 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
     final file = File('${directory.path}/orders_receipt.pdf');
     await file.writeAsBytes(await pdf.save());
 
-    await Share.shareXFiles([XFile(file.path)], text: AppLocalizations.of(context)!.ordersReceipt);
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path),], 
+        text: AppLocalizations.of(context)!.ordersReceipt,
+        sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+      )
+    );
   }
 
   @override
@@ -396,16 +403,7 @@ class _SpecificOrdersScreenState extends State<SpecificOrdersScreen> {
                 const SizedBox(height: 20),
                 if (!sell.isRefunded)
                   sell.shopifyId != null
-                      ? Center(
-                        child: Text(
-                          "( ${AppLocalizations.of(context)!.refundInShopify} )",
-                          style: TextStyle(
-                            //fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: mainColor,
-                          ),
-                        ),
-                      )
+                      ? Container()
                       : BlocBuilder<AllSellsCubit, AllSellsState>(
                           builder: (context, state) {
                             if (state is LoadingRefundSellsState) {

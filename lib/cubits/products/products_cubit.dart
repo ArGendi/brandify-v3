@@ -73,16 +73,17 @@ class ProductsCubit extends Cubit<ProductsState> {
           print("getting product from offline: ${products.length}");
         },
         shopify: () async{
-          print("getting product from shopify");
-          print("Admin: ${ShopifyServices.adminAPIAcessToken}");
-          // print(ShopifyServices.storeFrontAPIAcessToken);
-          print("Store id: ${ShopifyServices.storeId}");
-          print(ShopifyServices.locationId);
           List shopifyProducts = await ShopifyServices().getAllProducts();
-          print("getting product");
+          print("-----------------------------------------------------");
+          print("Productsssssssssssssssssssssssssssssssssssssssssssss: ${shopifyProducts.length}");
+          print("-----------------------------------------------------");
+          log("${shopifyProducts[0]}");
           for(var prod in shopifyProducts){
             products.add(Product.fromShopify(prod));
           }
+          print("-----------------------------------------------------");
+          print("Products Afteeeeeeeeeeer: ${products.length}");
+          print("-----------------------------------------------------");
           var response = await ProductServices().getProducts();
           if (response.status == Status.success) {
             List<Product> firebaseProducts = response.data as List<Product>;
@@ -96,6 +97,9 @@ class ProductsCubit extends Cubit<ProductsState> {
         },
       );
       filteredProducts = products;
+      print("-----------------------------------------------------");
+      print("Filtered Products: ${filteredProducts.length}");
+      print("-----------------------------------------------------");
       gettingData = false;
       emit(SuccessProductsState());
     }
@@ -287,7 +291,7 @@ class ProductsCubit extends Cubit<ProductsState> {
       filteredProducts = products;
     } else {
       filteredProducts = products
-          .where((e) => e.name.toString().toLowerCase().startsWith(value.toString().toLowerCase()))
+          .where((e) => e.name.toString().toLowerCase().contains(value.toString().toLowerCase()))
           .toList();
     }
     emit(FilterState());
@@ -346,7 +350,7 @@ class ProductsCubit extends Cubit<ProductsState> {
     }
   }
 
-  Product? refundProduct(dynamic id, ProductSize size, int quantity) {
+  Future<Product?> refundProduct(dynamic id, ProductSize size, int quantity) async{
     if (id == null) return null;
     
     for (int i = 0; i < products.length; i++) {
@@ -360,13 +364,24 @@ class ProductsCubit extends Cubit<ProductsState> {
         },
         shopify: () async{
           productId = products[i].shopifyId ?? products[i].backendId;
+          
         }
       );
       if (productId == id) {
         for (int j = 0; j < products[i].sizes.length; j++) {
           if (products[i].sizes[j].name == size.name) {
-            products[i].sizes[j].quantity = products[i].sizes[j].quantity! + quantity;
-            products[i].noOfSells -= quantity;
+            if(Package.type == PackageType.shopify){
+              bool isUpdated = await ShopifyServices().updateProductQuantity(products[i].sizes[j].id!, quantity);
+              if(isUpdated){
+                products[i].sizes[j].quantity = products[i].sizes[j].quantity! + quantity;
+                products[i].noOfSells -= quantity;
+              }
+            }
+            else{
+              products[i].sizes[j].quantity = products[i].sizes[j].quantity! + quantity;
+              products[i].noOfSells -= quantity;
+            }
+            
             log("Sells: ${products[i].noOfSells}");
             filteredProducts = products;
             emit(EditProductState());

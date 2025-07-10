@@ -551,9 +551,13 @@ class _ExtraExpensesScreenState extends State<ExtraExpensesScreen> {
                         final file = File('${directory.path}/expenses_summary.pdf');
                         await file.writeAsBytes(await pdf.save());
 
-                        await Share.shareXFiles(
-                          [XFile(file.path)],
-                          text: AppLocalizations.of(context)!.expensesSummary,
+                        final box = context.findRenderObject() as RenderBox?;
+                        await SharePlus.instance.share(
+                          ShareParams(
+                            files: [XFile(file.path),], 
+                            text: AppLocalizations.of(context)!.expensesSummary,
+                            sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+                          )
                         );
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(

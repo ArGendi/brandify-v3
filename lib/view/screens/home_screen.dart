@@ -1,4 +1,6 @@
+import 'package:brandify/enum.dart';
 import 'package:brandify/models/local/hive_services.dart';
+import 'package:brandify/models/package.dart';
 import 'package:brandify/view/screens/auth/phone_number_screen.dart';
 import 'package:brandify/view/screens/dashboard_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -53,32 +55,42 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isInitializingData = false;
 
   void initializeData() async {
+    var now = DateTime.now();
     isInitializingData = true;
     ReportsCubit.get(context).setIsLoading(true);
+    context.read<AppUserCubit>().setIsLoading(true);
     await context.read<AppUserCubit>().refreshUserData();
     await context.read<ProductsCubit>().getProducts();
-    int adsCost = await context.read<AdsCubit>().getAllAds();
-    int expensesCost = await context.read<ExtraExpensesCubit>().getAllExpenses();
-    await context.read<AllSellsCubit>().getSells(
+    ReportsCubit.get(context).setIsLoading(false);
+    int adsCost = await context.read<AdsCubit>().getAdsInDateRange(DateTime.now().subtract(Duration(days: 3)), DateTime.now());
+    int expensesCost = await context.read<ExtraExpensesCubit>().getExpensesInDateRange(DateTime.now().subtract(Duration(days: 3)), DateTime.now());
+    await context.read<AllSellsCubit>().getSellsInDateRange(
+      DateTime(now.year, now.month, now.day).subtract(Duration(days: 3)),
+      DateTime(now.year, now.month, now.day).add(Duration(days: 1)),
       expenses: adsCost + expensesCost,
       allProducts: context.read<ProductsCubit>().products,
     );
+    // if(Package.type == PackageType.shopify){
+      
+    // }
     AppUserCubit.get(context).setTotalAndProfit(
       AllSellsCubit.get(context).total, 
       AllSellsCubit.get(context).totalProfit,
     );
+    context.read<AppUserCubit>().setIsLoading(false);
+    
     context.read<SidesCubit>().getAllSides();
     // context.read<AppUserCubit>().calculateTotalAndProfit(
     //   context.read<AllSellsCubit>().sells,
     //   context.read<AdsCubit>().ads,
     //   context.read<ExtraExpensesCubit>().expenses,
     // );
-    initializeReports(
-      context.read<AllSellsCubit>().sells,
-      context.read<AdsCubit>().ads,
-      context.read<ExtraExpensesCubit>().expenses,
-    );
-    ReportsCubit.get(context).setIsLoading(false);
+    // initializeReports(
+    //   context.read<AllSellsCubit>().sells,
+    //   context.read<AdsCubit>().ads,
+    //   context.read<ExtraExpensesCubit>().expenses,
+    // );
+    
     isInitializingData = false;
     _checkPhoneNumber();
   }
@@ -212,13 +224,13 @@ class _HomeScreenState extends State<HomeScreen> {
             // if(index == 1){
             //   ProductsCubit.get(context).getProducts();
             // }
-            if (index == 2) {
-              initializeReports(
-                context.read<AllSellsCubit>().sells,
-                context.read<AdsCubit>().ads,
-                context.read<ExtraExpensesCubit>().expenses,
-              );
-            }
+            // if (index == 2) {
+            //   initializeReports(
+            //     context.read<AllSellsCubit>().sells,
+            //     context.read<AdsCubit>().ads,
+            //     context.read<ExtraExpensesCubit>().expenses,
+            //   );
+            // }
             setState(() => _currentIndex = index);
           },
           type: BottomNavigationBarType.fixed,
@@ -328,32 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Stats Cards
               BlocBuilder<AppUserCubit, AppUserState>(
                 builder: (context, state) {
-                  if (state is AppUserLoading) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            AppLocalizations.of(context)!.totalSales,
-                            '...',
-                            Icons.shopping_bag_rounded,
-                            Colors.blue,
-                            isLoading: true,
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: _buildStatCard(
-                            AppLocalizations.of(context)!.profit,
-                            '...',
-                            Icons.trending_up_rounded,
-                            Colors.green,
-                            isLoading: true,
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-
+                  final appUserCubit = context.read<AppUserCubit>();
                   if (state is AppUserDataValuesLoading) {
                     return Row(
                       children: [
@@ -379,57 +366,82 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     );
                   }
-
-                  final appUserCubit = context.read<AppUserCubit>();
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            initializeReports(
-                              context.read<AllSellsCubit>().sells,
-                              context.read<AdsCubit>().ads,
-                              context.read<ExtraExpensesCubit>().expenses,
-                            );
-                            setState(() => _currentIndex = 2);
-                          },
+                  else if (appUserCubit.isLoading == true) {
+                    return Row(
+                      children: [
+                        Expanded(
                           child: _buildStatCard(
                             AppLocalizations.of(context)!.totalSales,
-                            appUserCubit.total.toString(),
+                            '...',
                             Icons.shopping_bag_rounded,
                             Colors.blue,
+                            isLoading: true,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            initializeReports(
-                              context.read<AllSellsCubit>().sells,
-                              context.read<AdsCubit>().ads,
-                              context.read<ExtraExpensesCubit>().expenses,
-                            );
-                            setState(() => _currentIndex = 2);
-                          },
+                        const SizedBox(width: 15),
+                        Expanded(
                           child: _buildStatCard(
                             AppLocalizations.of(context)!.profit,
-                            appUserCubit.totalProfit.toString(),
-                            appUserCubit.totalProfit >= 0
-                                ? Icons.trending_up_rounded
-                                : Icons.trending_down_rounded,
-                            appUserCubit.totalProfit >= 0
-                                ? Colors.green
-                                : Colors.red,
-                            subtitle:
-                                appUserCubit.total > 0
-                                    ? '${((appUserCubit.totalProfit / appUserCubit.total) * 100).toStringAsFixed(1)}%'
-                                    : '0%',
+                            '...',
+                            Icons.trending_up_rounded,
+                            Colors.green,
+                            isLoading: true,
                           ),
                         ),
-                      ),
-                    ],
-                  );
+                      ],
+                    );
+                  }
+                  else{
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              // initializeReports(
+                              //   context.read<AllSellsCubit>().sells,
+                              //   context.read<AdsCubit>().ads,
+                              //   context.read<ExtraExpensesCubit>().expenses,
+                              // );
+                              setState(() => _currentIndex = 2);
+                            },
+                            child: _buildStatCard(
+                              AppLocalizations.of(context)!.totalSales,
+                              appUserCubit.total.toString(),
+                              Icons.shopping_bag_rounded,
+                              Colors.blue,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              // initializeReports(
+                              //   context.read<AllSellsCubit>().sells,
+                              //   context.read<AdsCubit>().ads,
+                              //   context.read<ExtraExpensesCubit>().expenses,
+                              // );
+                              setState(() => _currentIndex = 2);
+                            },
+                            child: _buildStatCard(
+                              AppLocalizations.of(context)!.profit,
+                              appUserCubit.totalProfit.toString(),
+                              appUserCubit.totalProfit >= 0
+                                  ? Icons.trending_up_rounded
+                                  : Icons.trending_down_rounded,
+                              appUserCubit.totalProfit >= 0
+                                  ? Colors.green
+                                  : Colors.red,
+                              subtitle:
+                                  appUserCubit.total > 0
+                                      ? '${((appUserCubit.totalProfit / appUserCubit.total) * 100).toStringAsFixed(1)}%'
+                                      : '0%',
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 25),
@@ -515,7 +527,16 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color),
+          Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 10),
+              Text(
+                AppLocalizations.of(context)!.today,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              )
+            ],
+          ),
           const SizedBox(height: 10),
           Row(
             children: [

@@ -13,6 +13,7 @@ import 'package:brandify/models/package.dart';
 import 'package:brandify/view/screens/account_settings_screen.dart';
 import 'package:brandify/view/screens/home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:brandify/view/screens/settings/shopify_setup_screen.dart';
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -106,6 +107,7 @@ class SettingsTab extends StatelessWidget {
                     );
                   },
                 ),
+
                 // _buildSettingItem(
                 //   AppLocalizations.of(context)!.changePackage,
                 //   Icons.card_membership_outlined,
@@ -262,7 +264,6 @@ class SettingsTab extends StatelessWidget {
                 //     }
                 //   },
                 // ),
-                 
                 _buildSettingItem(
                   AppLocalizations.of(context)!.language,
                   Icons.language_outlined,
@@ -271,120 +272,137 @@ class SettingsTab extends StatelessWidget {
                     showModalBottomSheet(
                       context: context,
                       backgroundColor: Colors.transparent,
-                      builder: (context) => Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(20),
+                      builder:
+                          (context) => Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                            ),
+                            padding: EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 4,
+                                  margin: EdgeInsets.only(bottom: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: mainColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.language,
+                                    size: 40,
+                                    color: mainColor,
+                                  ),
+                                ),
+                                SizedBox(height: 15),
+                                Text(
+                                  AppLocalizations.of(context)!.selectLanguage,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+                                Container(
+                                  //margin: EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      ListTile(
+                                        leading: Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Cache.getLanguage() == 'en'
+                                                    ? mainColor.withOpacity(0.1)
+                                                    : Colors.transparent,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.check_circle,
+                                            color:
+                                                Cache.getLanguage() == 'en'
+                                                    ? mainColor
+                                                    : Colors.transparent,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          AppLocalizations.of(context)!.english,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(15),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          context
+                                              .read<LanguageCubit>()
+                                              .changeLanguage('en');
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                      Divider(height: 10),
+                                      ListTile(
+                                        leading: Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Cache.getLanguage() == 'ar'
+                                                    ? mainColor.withOpacity(0.1)
+                                                    : Colors.transparent,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.check_circle,
+                                            color:
+                                                Cache.getLanguage() == 'ar'
+                                                    ? mainColor
+                                                    : Colors.transparent,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          AppLocalizations.of(context)!.arabic,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(
+                                            bottom: Radius.circular(15),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          context
+                                              .read<LanguageCubit>()
+                                              .changeLanguage('ar');
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        padding: EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 4,
-                              margin: EdgeInsets.only(bottom: 20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: mainColor.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.language,
-                                size: 40,
-                                color: mainColor,
-                              ),
-                            ),
-                            SizedBox(height: 15),
-                            Text(
-                              AppLocalizations.of(context)!.selectLanguage,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 20),
-                            Container(
-                              //margin: EdgeInsets.symmetric(horizontal: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Column(
-                                children: [
-                                  ListTile(
-                                    leading: Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Cache.getLanguage() == 'en' 
-                                            ? mainColor.withOpacity(0.1) 
-                                            : Colors.transparent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        color: Cache.getLanguage() == 'en' ? mainColor : Colors.transparent,
-                                      ),
-                                    ),
-                                    title: Text(
-                                        AppLocalizations.of(context)!.english,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-                                    ),
-                                    onTap: () {
-                                      context.read<LanguageCubit>().changeLanguage('en');
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                  Divider(height: 10),
-                                  ListTile(
-                                    leading: Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Cache.getLanguage() == 'ar' 
-                                            ? mainColor.withOpacity(0.1) 
-                                            : Colors.transparent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        color: Cache.getLanguage() == 'ar' ? mainColor : Colors.transparent,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      AppLocalizations.of(context)!.arabic,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
-                                    ),
-                                    onTap: () {
-                                      context.read<LanguageCubit>().changeLanguage('ar');
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   },
                 ),
@@ -401,6 +419,28 @@ class SettingsTab extends StatelessWidget {
                       whatsappUrl,
                       mode: LaunchMode.externalApplication,
                     );
+                  },
+                ),
+                BlocBuilder<AppUserCubit, AppUserState>(
+                  builder: (context, state) {
+                    if (Package.type == PackageType.online){
+                      return _buildSettingItem(
+                        AppLocalizations.of(context)!.connectShopifyTitle,
+                        Icons.shopping_bag,
+                        AppLocalizations.of(context)!.connectShopifySubtitle,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShopifySetupScreen(),
+                            ),
+                          );
+                        },
+                      );
+                    }
+                    else{
+                      return Container();
+                    }
                   },
                 ),
                 SizedBox(height: 20),

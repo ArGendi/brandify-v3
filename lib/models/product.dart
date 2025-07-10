@@ -42,20 +42,17 @@ class Product{
     shopifyId = shopifyProduct['id'];
     name = shopifyProduct['title'];
     description = shopifyProduct['body_html'] != null ? 
-    shopifyProduct['body_html'].toString().substring(
-      3, 
-      shopifyProduct['body_html'].toString().length - 4
-    ) : null;
-    image = shopifyProduct['images']?.isNotEmpty == true 
+    shopifyProduct['body_html'].toString() : null;
+    image = (shopifyProduct['images']?.isNotEmpty ?? false)
         ? shopifyProduct['images'][0]['src'] 
         : null;
-    shopifyPrice = (double.tryParse(shopifyProduct['variants']?[0]?['price'] ?? '0') ?? 0).round();
-    price = shopifyPrice;
-    print("$price & $shopifyPrice");
-    sku = shopifyProduct['variants']?[0]?['sku'];
-    code = shopifyProduct['variants']?[0]?['barcode'];
+    
     sizes = [];
     if (shopifyProduct['variants'] != null) {
+      shopifyPrice = (double.tryParse(shopifyProduct['variants']![0]?['price'] ?? '0') ?? 0).round();
+      price = shopifyPrice;
+      sku = shopifyProduct['variants']![0]?['sku'];
+      code = shopifyProduct['variants']![0]?['barcode'];
       for (var variant in shopifyProduct['variants']) {
         sizes.add(ProductSize(
           id: variant['id'],
@@ -63,6 +60,9 @@ class Product{
           quantity: int.tryParse(variant['inventory_quantity']?.toString() ?? '0') ?? 0,
         ));
       }
+    }
+    else{
+      price = shopifyPrice = 0;
     }
   }
 

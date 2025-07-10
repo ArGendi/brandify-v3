@@ -71,22 +71,6 @@ class PackageSelectionScreen extends StatelessWidget {
               icon: Icons.cloud,
             ),
             SizedBox(height: 20),
-            _buildPackageCard(
-              context,
-              title: AppLocalizations.of(context)!.shopifyPackage,
-              type: PackageType.shopify,
-              description: AppLocalizations.of(context)!.shopifyPackageDesc,
-              features: [
-                AppLocalizations.of(context)!.shopifyIntegration,
-                AppLocalizations.of(context)!.inventorySync,
-                AppLocalizations.of(context)!.orderManagement,
-                AppLocalizations.of(context)!.allOnlineFeatures,
-              ],
-              color: Colors.green,
-              icon: Icons.shopping_bag,
-              //isComingSoon: true,
-            ),
-            SizedBox(height: 20),
           ],
         ),
       ),
@@ -175,20 +159,54 @@ class PackageSelectionScreen extends StatelessWidget {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
-                              Package.type = type;
-                              await Package.checkAccessability(
-                                offline: () async {
-                                  FirestoreServices().updateUserData({
-                                    "package": PACKAGE_TYPE_OFFLINE,
+                              if (type == PackageType.online) {
+                                navigatorKey.currentState?.pop();
+                                final result = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)
+                                    ),
+                                    title: Text(AppLocalizations.of(context)!.shopifyDialogTitle),
+                                    content: Text(AppLocalizations.of(context)!.shopifyDialogBody),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: Text(AppLocalizations.of(context)!.no),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: Text(AppLocalizations.of(context)!.yes),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white
+                                        )
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (result == true) {
+                                  // User wants Shopify
+                                  Package.type = PackageType.shopify;
+                                  var response = await FirestoreServices().updateUserData({
+                                    "package": PACKAGE_TYPE_SHOPIFY,
                                   });
-                                  await Cache.setPackageType(PACKAGE_TYPE_OFFLINE);
-                                  
-                                  navigatorKey.currentState?.pushAndRemoveUntil(
-                                    MaterialPageRoute(builder: (context) => HomeScreen()),
-                                    (route) => false,
-                                  );
-                                },
-                                online: () async {
+                                  if (response.status == Status.success) {
+                                    await Cache.setPackageType(PACKAGE_TYPE_SHOPIFY);
+                                    navigatorKey.currentState?.push(
+                                      MaterialPageRoute(builder: (context) => ShopifySetupScreen()),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(response.data),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  // User does not want Shopify
+                                  Package.type = PackageType.online;
                                   var response = await FirestoreServices().updateUserData({
                                     "package": PACKAGE_TYPE_ONLINE,
                                   });
@@ -199,7 +217,6 @@ class PackageSelectionScreen extends StatelessWidget {
                                       (route) => false,
                                     );
                                   } else {
-                                    navigatorKey.currentState?.pop();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(response.data),
@@ -207,28 +224,18 @@ class PackageSelectionScreen extends StatelessWidget {
                                       ),
                                     );
                                   }
-                                },
-                                shopify: () async{
-                                  var response = await FirestoreServices().updateUserData({
-                                    "package": PACKAGE_TYPE_SHOPIFY,
-                                  });
-                                  if (response.status == Status.success){
-                                    await Cache.setPackageType(PACKAGE_TYPE_SHOPIFY);
-                                    navigatorKey.currentState?.push(
-                                      MaterialPageRoute(builder: (context) => ShopifySetupScreen()),
-                                    );
-                                  }
-                                  else {
-                                    navigatorKey.currentState?.pop();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(response.data),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                              );
+                                }
+                              } else if (type == PackageType.offline) {
+                                Package.type = type;
+                                await FirestoreServices().updateUserData({
+                                  "package": PACKAGE_TYPE_OFFLINE,
+                                });
+                                await Cache.setPackageType(PACKAGE_TYPE_OFFLINE);
+                                navigatorKey.currentState?.pushAndRemoveUntil(
+                                  MaterialPageRoute(builder: (context) => HomeScreen()),
+                                  (route) => false,
+                                );
+                              }
                             },
                             child: Text(AppLocalizations.of(context)!.confirm),
                             style: ElevatedButton.styleFrom(

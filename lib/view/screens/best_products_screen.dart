@@ -246,8 +246,12 @@ class _BestProductsScreenState extends State<BestProductsScreen> {
     final file = File('${directory.path}/best_products_report.pdf');
     await file.writeAsBytes(await pdf.save());
 
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      text: AppLocalizations.of(context)!.bestSellingProductsReport,
+    final box = context.findRenderObject() as RenderBox?;
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path),], 
+        text: AppLocalizations.of(context)!.bestSellingProductsReport,
+        sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
+      )
     );
   }
