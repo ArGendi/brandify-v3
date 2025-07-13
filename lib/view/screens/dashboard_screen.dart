@@ -37,6 +37,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _updateUserPackage(String userId, String newPackage) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'package': newPackage,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Package updated to $newPackage'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating package: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPackageEditDialog(String userId, String currentPackage) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String selectedPackage = currentPackage;
+        return AlertDialog(
+          title: const Text('Edit User Package'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return DropdownButtonFormField<String>(
+                value: selectedPackage,
+                decoration: const InputDecoration(
+                  labelText: 'Select Package',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'offline', child: Text('Offline')),
+                  DropdownMenuItem(value: 'online', child: Text('Online')),
+                  DropdownMenuItem(value: 'shopify', child: Text('Shopify')),
+                ],
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedPackage = newValue!;
+                  });
+                },
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _updateUserPackage(userId, selectedPackage);
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,27 +299,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           ),
                                         ),
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: userData['package'] == "offline" 
-                                              ? Colors.grey 
-                                              : userData['package'] == "online"? Colors.blue : Colors.green,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          userData['package'] ?? 'No Package',
-                                          style: TextStyle(
-                                            color: userData['package'] == "offline" 
-                                                ? mainColor 
-                                                : Colors.white,
-                                            fontWeight: FontWeight.w500,
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: userData['package'] == "offline" 
+                                                  ? Colors.grey 
+                                                  : userData['package'] == "online"? Colors.blue : Colors.green,
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              userData['package'] ?? 'No Package',
+                                              style: TextStyle(
+                                                color: userData['package'] == "offline" 
+                                                    ? mainColor 
+                                                    : Colors.white,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: const Icon(Icons.edit, size: 16),
+                                            onPressed: () => _showPackageEditDialog(
+                                              userId, 
+                                              userData['package'] ?? 'offline'
+                                            ),
+                                            tooltip: 'Edit Package',
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
+                                  _buildInfoRow('Email', userData['email'] ?? 'N/A'),
                                   InkWell(
                                     onTap: () {
                                       final phone = userData['brandPhone']?.toString().replaceAll(RegExp(r'[^0-9]'), '');
@@ -262,6 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       isClickable: true,
                                     ),
                                   ),
+                                  _buildInfoRow('Phone Type', userData['phoneType'] ?? 'N/A'),
                                   _buildInfoRow('Created At', _formatDate(userData['createdAt'])),
                                   const SizedBox(height: 8),
                                   Text(
