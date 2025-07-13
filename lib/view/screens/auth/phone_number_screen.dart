@@ -1,3 +1,8 @@
+import 'package:brandify/enum.dart';
+import 'package:brandify/main.dart';
+import 'package:brandify/models/package.dart';
+import 'package:brandify/view/screens/home_screen.dart';
+import 'package:brandify/view/screens/settings/shopify_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:brandify/constants.dart';
@@ -46,11 +51,75 @@ class _PhoneNumberScreenBody extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: BlocConsumer<PhoneNumberCubit, PhoneNumberState>(
-            listener: (context, state) {
+            listener: (context, state) async{
               if (state is PhoneNumberSaved) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => PackageSelectionScreen()),
+                final result = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)
+                    ),
+                    title: Text(AppLocalizations.of(context)!.shopifyDialogTitle),
+                    content: Text(AppLocalizations.of(context)!.shopifyDialogBody),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text(AppLocalizations.of(context)!.no),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: Text(AppLocalizations.of(context)!.yes),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white
+                        )
+                      ),
+                    ],
+                  ),
                 );
+                if (result == true) {
+                  // User wants Shopify
+                  Package.type = PackageType.shopify;
+                  var response = await FirestoreServices().updateUserData({
+                    "package": PACKAGE_TYPE_SHOPIFY,
+                  });
+                  if (response.status == Status.success) {
+                    await Cache.setPackageType(PACKAGE_TYPE_SHOPIFY);
+                    navigatorKey.currentState?.push(
+                      MaterialPageRoute(builder: (context) => ShopifySetupScreen()),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(response.data),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } else {
+                  // User does not want Shopify
+                  Package.type = PackageType.online;
+                  var response = await FirestoreServices().updateUserData({
+                    "package": PACKAGE_TYPE_ONLINE,
+                  });
+                  if (response.status == Status.success) {
+                    await Cache.setPackageType(PACKAGE_TYPE_ONLINE);
+                    navigatorKey.currentState?.pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                      (route) => false,
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(response.data),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+                // Navigator.of(context).pushReplacement(
+                //   MaterialPageRoute(builder: (_) => PackageSelectionScreen()),
+                // );
               } else if (state is PhoneNumberError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(state.message)),

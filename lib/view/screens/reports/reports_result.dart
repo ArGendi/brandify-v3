@@ -87,11 +87,11 @@ class _ReportsResultState extends State<ReportsResult> {
   void initState() {
     super.initState();
     loadingMessage = null;
-    _timer4s = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => loadingMessage = "OMG, I'm getting so many orders 🤩");
+    _timer4s = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => loadingMessage = AppLocalizations.of(context)!.loadingDoingMyBest);
     });
-    _timer8s = Timer(const Duration(seconds: 8), () {
-      if (mounted) setState(() => loadingMessage = "Are you ready ?");
+    _timer8s = Timer(const Duration(seconds: 12), () {
+      if (mounted) setState(() => loadingMessage = AppLocalizations.of(context)!.loadingAreYouReady);
     });
     getReportData();
   }
@@ -283,7 +283,7 @@ class _ReportsResultState extends State<ReportsResult> {
                 context,
                 MaterialPageRoute(
                   builder:
-                      (_) => BestProductsScreen(dateRange: current?.dateRange),
+                      (_) => BestProductsScreen(),
                 ),
               );
             },

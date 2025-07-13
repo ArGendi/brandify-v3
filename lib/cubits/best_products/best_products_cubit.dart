@@ -1,4 +1,5 @@
 import 'package:bloc/bloc.dart';
+import 'package:brandify/cubits/reports/reports_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
@@ -36,7 +37,7 @@ class BestProductsCubit extends Cubit<BestProductsState> {
   Future<void> _calculateBestProducts(BuildContext context) async{
     if (selectedDateRange == null) return;
 
-    final sells = context.read<AllSellsCubit>().sells;
+    final sells = context.read<ReportsCubit>().currentReport?.sells ?? [];
     final filteredSells = sells.where((sell) {
       final sellDate = sell.date;
       if (sellDate == null) return false;

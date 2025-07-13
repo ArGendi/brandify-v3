@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:brandify/cubits/reports/reports_cubit.dart';
 import 'package:brandify/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,8 +23,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class BestProductsScreen extends StatefulWidget {
-  final DateTimeRange? dateRange;
-  const BestProductsScreen({super.key, this.dateRange});
+  //final DateTimeRange? dateRange;
+  const BestProductsScreen({super.key});
 
   @override
   State<BestProductsScreen> createState() => _BestProductsScreenState();
@@ -34,19 +35,21 @@ class _BestProductsScreenState extends State<BestProductsScreen> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    if(widget.dateRange != null){
-      context.read<BestProductsCubit>().setRange(context, widget.dateRange!);
-    }
+    context.read<BestProductsCubit>().setRange(
+      context,
+      context.read<ReportsCubit>().currentReport!.dateRange!
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    var dateRange = context.read<ReportsCubit>().currentReport!.dateRange!;
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.bestSellingProducts),
         actions: [
           IconButton(
-            onPressed: () => _shareBestProducts(context, widget.dateRange!),
+            onPressed: () => _shareBestProducts(context, dateRange),
             icon: const Icon(Icons.share),
           ),
           IconButton(

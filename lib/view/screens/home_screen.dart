@@ -62,10 +62,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<AppUserCubit>().refreshUserData();
     await context.read<ProductsCubit>().getProducts();
     ReportsCubit.get(context).setIsLoading(false);
-    int adsCost = await context.read<AdsCubit>().getAdsInDateRange(DateTime.now().subtract(Duration(days: 3)), DateTime.now());
-    int expensesCost = await context.read<ExtraExpensesCubit>().getExpensesInDateRange(DateTime.now().subtract(Duration(days: 3)), DateTime.now());
+    int adsCost = await context.read<AdsCubit>().getAdsInDateRange(DateTime.now(), DateTime.now());
+    int expensesCost = await context.read<ExtraExpensesCubit>().getExpensesInDateRange(DateTime.now(), DateTime.now());
     await context.read<AllSellsCubit>().getSellsInDateRange(
-      DateTime(now.year, now.month, now.day).subtract(Duration(days: 3)),
+      DateTime(now.year, now.month, now.day),
       DateTime(now.year, now.month, now.day).add(Duration(days: 1)),
       expenses: adsCost + expensesCost,
       allProducts: context.read<ProductsCubit>().products,
