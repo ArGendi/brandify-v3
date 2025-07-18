@@ -14,6 +14,7 @@ import 'package:brandify/view/screens/account_settings_screen.dart';
 import 'package:brandify/view/screens/home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:brandify/view/screens/settings/shopify_setup_screen.dart';
+import 'package:brandify/view/screens/user_management_screen.dart';
 
 class SettingsTab extends StatelessWidget {
   const SettingsTab({super.key});
@@ -107,6 +108,31 @@ class SettingsTab extends StatelessWidget {
                     );
                   },
                 ),
+                
+                  BlocBuilder<AppUserCubit, AppUserState>(
+                    builder: (context, state) {
+                      if (context.read<AppUserCubit>().privileges.contains(
+                        Privilege.userManagement,
+                      )){
+                        return _buildSettingItem(
+                          'User Management',
+                          Icons.group,
+                          'Create and manage users with limited privileges',
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => UserManagementScreen(),
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      else{
+                        return Container();
+                      }
+                    },
+                  ),
 
                 // _buildSettingItem(
                 //   AppLocalizations.of(context)!.changePackage,
@@ -423,7 +449,7 @@ class SettingsTab extends StatelessWidget {
                 ),
                 BlocBuilder<AppUserCubit, AppUserState>(
                   builder: (context, state) {
-                    if (Package.type == PackageType.online){
+                    if (Package.type == PackageType.online) {
                       return _buildSettingItem(
                         AppLocalizations.of(context)!.connectShopifyTitle,
                         Icons.shopping_bag,
@@ -437,8 +463,7 @@ class SettingsTab extends StatelessWidget {
                           );
                         },
                       );
-                    }
-                    else{
+                    } else {
                       return Container();
                     }
                   },

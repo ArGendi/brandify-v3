@@ -36,6 +36,9 @@ import 'package:brandify/view/screens/sides_screen.dart';
 import 'package:brandify/view/screens/tabs/settings_tab.dart';
 import 'package:brandify/view/widgets/package_card.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:brandify/view/widgets/custom_texfield.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ReportsCubit.get(context).setIsLoading(true);
     context.read<AppUserCubit>().setIsLoading(true);
     await context.read<AppUserCubit>().refreshUserData();
+    await internalUserDialog();
     await context.read<ProductsCubit>().getProducts();
     ReportsCubit.get(context).setIsLoading(false);
     int adsCost = await context.read<AdsCubit>().getAdsInDateRange(DateTime.now(), DateTime.now());
@@ -102,6 +106,143 @@ class _HomeScreenState extends State<HomeScreen> {
         (route) => false
       );
     }
+  }
+
+  Future<void> internalUserDialog() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    final subusersQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('subusers')
+        .get();
+    if (subusersQuery.docs.isEmpty) {
+      // No subusers, set all privileges
+      AppUserCubit.get(navigatorKey.currentContext!).setPrivileges(
+        Privilege.values.map((e) => e.asString).toList(),
+      );
+      return;
+    }
+
+    // Check cache
+    final cachedUsername = CacheUsernameExtension.getUsername();
+    final cachedPassword = CachePasswordExtension.getPassword();
+    if (cachedUsername != null && cachedPassword != null) {
+      final match = subusersQuery.docs.where(
+        (doc) =>
+            (doc['username'] == cachedUsername &&
+             doc['password'] == cachedPassword),
+      ).toList();
+      if (match.isNotEmpty) {
+        // Fetch and set privileges
+        final privs = List<String>.from(match.first['privileges'] ?? []);
+        AppUserCubit.get(navigatorKey.currentContext!).setPrivileges(privs);
+        return;
+      }
+    }
+
+    String? errorText;
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isLoading = false;
+    await showDialog(
+      context: navigatorKey.currentContext!,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Text(
+                        'User Login',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    CustomTextFormField(
+                      controller: usernameController,
+                      text: 'Username',
+                      onSaved: (_) {},
+                      onValidate: (_) => null,
+                      prefix: Icon(Icons.person, color: mainColor),
+                    ),
+                    SizedBox(height: 16),
+                    CustomTextFormField(
+                      controller: passwordController,
+                      text: 'Password',
+                      obscureText: true,
+                      onSaved: (_) {},
+                      onValidate: (_) => null,
+                      prefix: Icon(Icons.lock, color: mainColor),
+                    ),
+                    if (errorText != null) ...[
+                      SizedBox(height: 12),
+                      Center(
+                        child: Text(
+                          errorText!,
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              setState(() => isLoading = true);
+                              final username = usernameController.text.trim();
+                              final password = passwordController.text.trim();
+                              final match = subusersQuery.docs.where(
+                                (doc) =>
+                                    (doc['username'] == username &&
+                                     doc['password'] == password),
+                              ).toList();
+                              if (match.isNotEmpty) {
+                                // Save to cache
+                                await CacheUsernameExtension.setUsername(username);
+                                await CachePasswordExtension.setPassword(password);
+                                // Fetch and set privileges for session
+                                final privs = List<String>.from(match.first['privileges'] ?? []);
+                                AppUserCubit.get(navigatorKey.currentContext!).setPrivileges(privs);
+                                Navigator.of(context).pop();
+                              } else {
+                                setState(() {
+                                  errorText = 'Invalid username or password';
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                      child: isLoading
+                          ? SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text('Start', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void initializeReports(
@@ -406,7 +547,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             child: _buildStatCard(
                               AppLocalizations.of(context)!.totalSales,
-                              appUserCubit.total.toString(),
+                              appUserCubit.privileges.contains(Privilege.viewSales) ? 
+                                appUserCubit.total.toString() : "N/A",
                               Icons.shopping_bag_rounded,
                               Colors.blue,
                             ),
@@ -425,7 +567,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             child: _buildStatCard(
                               AppLocalizations.of(context)!.profit,
-                              appUserCubit.totalProfit.toString(),
+                              appUserCubit.privileges.contains(Privilege.viewProfit) ? 
+                               appUserCubit.totalProfit.toString() : "N/A",
                               appUserCubit.totalProfit >= 0
                                   ? Icons.trending_up_rounded
                                   : Icons.trending_down_rounded,
@@ -433,9 +576,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ? Colors.green
                                   : Colors.red,
                               subtitle:
+                                  appUserCubit.privileges.contains(Privilege.viewProfit) ?
                                   appUserCubit.total > 0
                                       ? '${((appUserCubit.totalProfit / appUserCubit.total) * 100).toStringAsFixed(1)}%'
-                                      : '0%',
+                                      : '0%' : "",
                             ),
                           ),
                         ),
@@ -643,6 +787,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSettingsTab() {
     return const Placeholder(); // Implement settings screen
+  }
+}
+
+extension CachePasswordExtension on Cache {
+  static Future<void> setPassword(String value) async {
+    await Cache.sharedPreferences.setString('password', value);
+  }
+  static String? getPassword() {
+    return Cache.sharedPreferences.getString('password');
+  }
+}
+
+extension CacheUsernameExtension on Cache {
+  static Future<void> setUsername(String value) async {
+    await Cache.sharedPreferences.setString('username', value);
+  }
+  static String? getUsername() {
+    return Cache.sharedPreferences.getString('username');
   }
 }
 

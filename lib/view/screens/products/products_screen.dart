@@ -196,7 +196,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       ),
       floatingActionButton: BlocBuilder<AppUserCubit, AppUserState>(
         builder: (context, state) {
-          if(Package.type != PackageType.shopify){
+          if(Package.type != PackageType.shopify && context.read<AppUserCubit>().privileges.contains(Privilege.addProduct)){
             return FloatingActionButton.extended(
               onPressed: () {
                 ProductsCubit.get(context).filteredProducts =

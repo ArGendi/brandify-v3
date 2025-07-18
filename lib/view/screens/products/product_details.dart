@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:brandify/cubits/app_user/app_user_cubit.dart';
 import 'package:brandify/enum.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -115,6 +116,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               ),
             ),
             actions: Package.type != PackageType.shopify ? [
+              if(context.read<AppUserCubit>().privileges.contains(Privilege.editProduct))
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.white),
                 onPressed: () {
@@ -128,6 +130,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                   );
                 },
               ),
+              if(context.read<AppUserCubit>().privileges.contains(Privilege.deleteProduct))
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.white),
                 onPressed: () => showDeleteAlertDialog(context),
@@ -179,7 +182,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                               ),
                               //const SizedBox(height: 4),
                               Text(
-                                "${AppLocalizations.of(context)!.totalAmount(totalQuantity * (widget.product.price ?? 0))}",
+                                context.read<AppUserCubit>().privileges.contains(Privilege.viewCostPrice)? 
+                                "${AppLocalizations.of(context)!.totalAmount(totalQuantity * (widget.product.price ?? 0))}" : "N/A",
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey[600],
@@ -199,7 +203,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                "${AppLocalizations.of(context)!.currency(widget.product.price ?? 0) }",
+                                context.read<AppUserCubit>().privileges.contains(Privilege.viewCostPrice)? 
+                                "${AppLocalizations.of(context)!.currency(widget.product.price ?? 0) }" : "N/A",
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

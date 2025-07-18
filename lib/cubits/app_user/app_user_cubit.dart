@@ -35,6 +35,7 @@ class AppUserCubit extends Cubit<AppUserState> {
   bool isLoggedInNow = false;
   DateTime? createdAt;
   bool isLoading = false;
+  List<Privilege> privileges = [];
 
   AppUserCubit() : super(AppUserInitial());
 
@@ -321,6 +322,14 @@ class AppUserCubit extends Cubit<AppUserState> {
     print("isSuccess : $isSuccess");
     return isSuccess;
   }
+
+  void setPrivileges(List<String> privs) {
+    print(privs);
+    privileges = privs.map((e) => PrivilegeExtension.fromString(e)).whereType<Privilege>().toList();
+    emit(AppUserLoaded());
+  }
+
+  List<Privilege> getPrivileges() => privileges;
 
   Future<void> logout(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;

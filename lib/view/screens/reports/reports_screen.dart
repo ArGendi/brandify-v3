@@ -1,3 +1,5 @@
+import 'package:brandify/cubits/app_user/app_user_cubit.dart';
+import 'package:brandify/enum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:brandify/constants.dart';
@@ -77,7 +79,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 child: BlocBuilder<ReportsCubit, ReportsState>(
                   builder: (context, state) {
-                    if(ReportsCubit.get(context).isLoading){
+                    if(!context.read<AppUserCubit>().privileges.contains(Privilege.viewReports)){
+                      return Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.visibility_off_rounded),
+                              SizedBox(height: 10,),
+                              Text("You don't have the access"),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    else if(ReportsCubit.get(context).isLoading){
                       return Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Center(
@@ -197,6 +214,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
               const SizedBox(height: 25),
+              if(context.read<AppUserCubit>().privileges.contains(Privilege.viewReports))
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

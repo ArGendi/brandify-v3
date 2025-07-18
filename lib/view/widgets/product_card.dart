@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:brandify/cubits/app_user/app_user_cubit.dart';
+import 'package:brandify/enum.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:brandify/cubits/products/products_cubit.dart';
@@ -7,6 +9,7 @@ import 'package:brandify/main.dart';
 import 'package:brandify/models/package.dart';
 import 'package:brandify/models/product.dart';
 import 'package:brandify/view/screens/products/product_details.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProductCard extends StatelessWidget {
@@ -113,7 +116,8 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      AppLocalizations.of(context)!.priceAmount(product.price ?? 0),
+                      context.read<AppUserCubit>().privileges.contains(Privilege.viewCostPrice)? 
+                      AppLocalizations.of(context)!.priceAmount(product.price ?? 0) : "N/A",
                       style: TextStyle(
                         fontSize: 16,
                         color: Theme.of(context).primaryColor,

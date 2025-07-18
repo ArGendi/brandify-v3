@@ -531,5 +531,7 @@
     "yes": "Yes",
     "no": "No",
     "connectShopifyTitle": "Connect to Shopify",
-    "connectShopifySubtitle": "Connect your Shopify store to the app"
+    "connectShopifySubtitle": "Connect your Shopify store to the app",
+    "loadingDoingMyBest": "Still working, doing my best 😊",
+    "loadingAreYouReady": "Almost there, are you ready?"
 }
