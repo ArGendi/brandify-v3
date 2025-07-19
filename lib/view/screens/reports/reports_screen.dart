@@ -44,8 +44,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.reports,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(
+          AppLocalizations.of(context)!.reports,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         backgroundColor: Color(0xFFD5E4DD),
         elevation: 0,
       ),
@@ -79,7 +81,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
                 child: BlocBuilder<ReportsCubit, ReportsState>(
                   builder: (context, state) {
-                    if(!context.read<AppUserCubit>().privileges.contains(Privilege.viewReports)){
+                    if (!context.read<AppUserCubit>().privileges.contains(
+                      Privilege.viewReports,
+                    )) {
                       return Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Center(
@@ -87,14 +91,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.visibility_off_rounded),
-                              SizedBox(height: 10,),
-                              Text("You don't have the access"),
+                              SizedBox(height: 10),
+                              Text(AppLocalizations.of(context)!.noAccess),
                             ],
                           ),
                         ),
                       );
-                    }
-                    else if(ReportsCubit.get(context).isLoading){
+                    } else if (ReportsCubit.get(context).isLoading) {
                       return Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Center(
@@ -106,7 +109,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(mainColor),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    mainColor,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -121,160 +126,196 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                         ),
                       );
-                    }
-                    else return Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildReportCard(
-                                context,
-                                AppLocalizations.of(context)!.today,
-                                ReportsCubit.get(context).today?.totalProfit ??
-                                    0,
-                                mainColor, //Color(0xFF93B0A2), // Darker variant
-                                () {
-                                  var now = DateTime.now();
-                                  return _navigateToReport(
-                                    context, AppLocalizations.of(context)!.today,
-                                    DateTime(now.year, now.month, now.day),
-                                    DateTime(now.year, now.month, now.day).add(Duration(days: 1)),
-                                  );
-                                }
+                    } else
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildReportCard(
+                                  context,
+                                  AppLocalizations.of(context)!.today,
+                                  ReportsCubit.get(
+                                        context,
+                                      ).today?.totalProfit ??
+                                      0,
+                                  mainColor, //Color(0xFF93B0A2), // Darker variant
+                                  () {
+                                    var now = DateTime.now();
+                                    return _navigateToReport(
+                                      context,
+                                      AppLocalizations.of(context)!.today,
+                                      DateTime(now.year, now.month, now.day),
+                                      DateTime(
+                                        now.year,
+                                        now.month,
+                                        now.day,
+                                      ).add(Duration(days: 1)),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildReportCard(
-                                context,
-                                AppLocalizations.of(context)!.sevenDays,
-                                ReportsCubit.get(context).week?.totalProfit ??
-                                    0,
-                                mainColor,//Color(0xFF7D9889), // Even darker
-                                () {
-                                  var now = DateTime.now();
-                                  return _navigateToReport(
-                                    context,
-                                    AppLocalizations.of(context)!.thisWeek,
-                                    now.subtract(Duration(days: 7)),
-                                    now,
-                                  );
-                                }
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildReportCard(
+                                  context,
+                                  AppLocalizations.of(context)!.sevenDays,
+                                  ReportsCubit.get(context).week?.totalProfit ??
+                                      0,
+                                  mainColor, //Color(0xFF7D9889), // Even darker
+                                  () {
+                                    var now = DateTime.now();
+                                    return _navigateToReport(
+                                      context,
+                                      AppLocalizations.of(context)!.thisWeek,
+                                      now.subtract(Duration(days: 7)),
+                                      now,
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildReportCard(
-                                context,
-                                AppLocalizations.of(context)!.thisMonth,
-                                ReportsCubit.get(context).month?.totalProfit ??
-                                    0,
-                                mainColor,//Color(0xFF678073), // More darker
-                                () {
-                                  var now = DateTime.now();
-                                  return _navigateToReport(
-                                    context,
-                                    AppLocalizations.of(context)!.thisMonth,
-                                    DateTime(now.year, now.month),
-                                    now,
-                                  );
-                                }
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildReportCard(
+                                  context,
+                                  AppLocalizations.of(context)!.thisMonth,
+                                  ReportsCubit.get(
+                                        context,
+                                      ).month?.totalProfit ??
+                                      0,
+                                  mainColor, //Color(0xFF678073), // More darker
+                                  () {
+                                    var now = DateTime.now();
+                                    return _navigateToReport(
+                                      context,
+                                      AppLocalizations.of(context)!.thisMonth,
+                                      DateTime(now.year, now.month),
+                                      now,
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildReportCard(
-                                context,
-                                AppLocalizations.of(context)!.threeMonths,
-                                ReportsCubit.get(context)
-                                        .threeMonths
-                                        ?.totalProfit ??
-                                    0,
-                                mainColor,//Color(0xFF51685D), // Darkest variant
-                                () {
-                                  var now = DateTime.now();
-                                  return _navigateToReport(
-                                    context,
-                                    AppLocalizations.of(context)!.threeMonths,
-                                    DateTime(now.year, now.month - 2),
-                                    now,
-                                  );
-                                }
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildReportCard(
+                                  context,
+                                  AppLocalizations.of(context)!.threeMonths,
+                                  ReportsCubit.get(
+                                        context,
+                                      ).threeMonths?.totalProfit ??
+                                      0,
+                                  mainColor, //Color(0xFF51685D), // Darkest variant
+                                  () {
+                                    var now = DateTime.now();
+                                    return _navigateToReport(
+                                      context,
+                                      AppLocalizations.of(context)!.threeMonths,
+                                      DateTime(now.year, now.month - 2),
+                                      now,
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
+                            ],
+                          ),
+                        ],
+                      );
                   },
                 ),
               ),
               const SizedBox(height: 25),
-              if(context.read<AppUserCubit>().privileges.contains(Privilege.viewReports))
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: mainColor.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(AppLocalizations.of(context)!.customRange,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              )),
+                BlocBuilder<AppUserCubit, AppUserState>(
+                  builder: (context, state) {
+                    if (context.read<AppUserCubit>().privileges.contains(
+                      Privilege.viewReports,
+                    )){
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: mainColor.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
-                        Expanded(child: Divider(color: Colors.grey.shade300)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    BlocBuilder<ReportsCubit, ReportsState>(
-                      builder: (context, state) => _buildDateButton(
-                        context,
-                        ReportsCubit.get(context).fromDate == null
-                            ? AppLocalizations.of(context)!.selectStartDate
-                            : ReportsCubit.get(context).getFromDate(),
-                        Icons.calendar_today,
-                        () => _selectFromDate(context),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    BlocBuilder<ReportsCubit, ReportsState>(
-                      builder: (context, state) => _buildDateButton(
-                        context,
-                        ReportsCubit.get(context).toDate == null
-                            ? AppLocalizations.of(context)!.selectEndDate
-                            : ReportsCubit.get(context).getToDate(),
-                        Icons.calendar_today,
-                        () => _selectToDate(context),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    CustomButton(
-                      text: AppLocalizations.of(context)!.generateReport,
-                      icon: const Icon(Icons.analytics, color: Colors.white),
-                      onPressed: () => _generateReport(context),
-                    ),
-                  ],
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(color: Colors.grey.shade300),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context)!.customRange,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Divider(color: Colors.grey.shade300),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            BlocBuilder<ReportsCubit, ReportsState>(
+                              builder:
+                                  (context, state) => _buildDateButton(
+                                    context,
+                                    ReportsCubit.get(context).fromDate == null
+                                        ? AppLocalizations.of(
+                                          context,
+                                        )!.selectStartDate
+                                        : ReportsCubit.get(context).getFromDate(),
+                                    Icons.calendar_today,
+                                    () => _selectFromDate(context),
+                                  ),
+                            ),
+                            const SizedBox(height: 10),
+                            BlocBuilder<ReportsCubit, ReportsState>(
+                              builder:
+                                  (context, state) => _buildDateButton(
+                                    context,
+                                    ReportsCubit.get(context).toDate == null
+                                        ? AppLocalizations.of(
+                                          context,
+                                        )!.selectEndDate
+                                        : ReportsCubit.get(context).getToDate(),
+                                    Icons.calendar_today,
+                                    () => _selectToDate(context),
+                                  ),
+                            ),
+                            const SizedBox(height: 15),
+                            CustomButton(
+                              text: AppLocalizations.of(context)!.generateReport,
+                              icon: const Icon(
+                                Icons.analytics,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => _generateReport(context),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    else{
+                      return Container();
+                    }
+                  },
                 ),
-              ),
             ],
           ),
         ),
@@ -282,8 +323,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildReportCard(BuildContext context, String title, num profit,
-      Color color, VoidCallback onTap) {
+  Widget _buildReportCard(
+    BuildContext context,
+    String title,
+    num profit,
+    Color color,
+    VoidCallback onTap,
+  ) {
     String sign = profit > 0 ? "+" : "";
     return GestureDetector(
       onTap: onTap,
@@ -312,7 +358,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
             Text(
-              "",//"$sign$profit",
+              "", //"$sign$profit",
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -325,8 +371,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildDateButton(BuildContext context, String text, IconData icon,
-      VoidCallback onPressed) {
+  Widget _buildDateButton(
+    BuildContext context,
+    String text,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -342,13 +392,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             children: [
               Icon(icon, color: mainColor),
               const SizedBox(width: 10),
-              Text(
-                text,
-                style: TextStyle(
-                  color: mainColor,
-                  fontSize: 16,
-                ),
-              ),
+              Text(text, style: TextStyle(color: mainColor, fontSize: 16)),
             ],
           ),
         ),
@@ -358,15 +402,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   // Add these functions after the existing widget methods
 
-  void _navigateToReport(BuildContext context, String title, DateTime from, DateTime to) {
+  void _navigateToReport(
+    BuildContext context,
+    String title,
+    DateTime from,
+    DateTime to,
+  ) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ReportsResult(
-          title: title,
-          from: from,
-          to: to,
-        ),
+        builder: (context) => ReportsResult(title: title, from: from, to: to),
       ),
     );
   }
@@ -401,16 +446,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ReportsResult(
-            from: ReportsCubit.get(context).fromDate!,
-            to: ReportsCubit.get(context).toDate!,
-          ),
+          builder:
+              (context) => ReportsResult(
+                from: ReportsCubit.get(context).fromDate!,
+                to: ReportsCubit.get(context).toDate!,
+              ),
         ),
       );
-    }
-    else{
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.selectDateFromAndToFirst))
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.selectDateFromAndToFirst),
+        ),
       );
     }
   }

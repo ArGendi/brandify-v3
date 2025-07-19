@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/app_user.dart';
 import 'package:brandify/constants.dart';
 import 'package:brandify/view/widgets/custom_texfield.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -44,15 +45,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final usernameController = TextEditingController(text: user?.username ?? '');
     final passwordController = TextEditingController(text: user?.password ?? '');
     final phoneController = TextEditingController(text: user?.phone ?? '');
-    final privilegeDisplayNames = {
-      'view_sales': 'View Sales',
-      'view_profit': 'View Profit',
-      'view_cost_price': 'View Cost Price',
-      'add_product': 'Add Product',
-      'edit_product': 'Edit Product',
-      'delete_product': 'Delete Product',
-      'view_reports': 'View Reports',
-      'user_management': 'User Management',
+    final privilegeKeyMap = {
+      'view_sales': AppLocalizations.of(context)!.privilegeViewSales,
+      'view_profit': AppLocalizations.of(context)!.privilegeViewProfit,
+      'view_cost_price': AppLocalizations.of(context)!.privilegeViewCostPrice,
+      'add_product': AppLocalizations.of(context)!.privilegeAddProduct,
+      'edit_product': AppLocalizations.of(context)!.privilegeEditProduct,
+      'delete_product': AppLocalizations.of(context)!.privilegeDeleteProduct,
+      'view_reports': AppLocalizations.of(context)!.privilegeViewReports,
+      'user_management': AppLocalizations.of(context)!.privilegeUserManagement,
     };
     final privilegesList = [
       'view_sales',
@@ -101,33 +102,33 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         ),
                       ),
                       Text(
-                        isEdit ? 'Edit User' : 'Add User',
+                        isEdit ? AppLocalizations.of(context)!.editUser ?? 'Edit User' : AppLocalizations.of(context)!.addUser ?? 'Add User', // TODO: Add 'editUser' and 'addUser' to ARB files
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: mainColor),
                       ),
                       SizedBox(height: 20),
                       CustomTextFormField(
                         controller: usernameController,
-                        text: 'Username',
+                        text: AppLocalizations.of(context)!.username,
                         onSaved: (_) {},
-                        onValidate: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        onValidate: (v) => v == null || v.isEmpty ? AppLocalizations.of(context)!.required ?? 'Required' : null, // TODO: Add 'required' to ARB files
                       ),
                       SizedBox(height: 15),
                       CustomTextFormField(
                         controller: passwordController,
-                        text: 'Password',
+                        text: AppLocalizations.of(context)!.password,
                         obscureText: true,
                         onSaved: (_) {},
-                        onValidate: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        onValidate: (v) => v == null || v.isEmpty ? AppLocalizations.of(context)!.required ?? 'Required' : null,
                       ),
                       SizedBox(height: 15),
                       CustomTextFormField(
                         controller: phoneController,
-                        text: 'Phone',
+                        text: AppLocalizations.of(context)!.phone ?? 'Phone', // TODO: Add 'phone' to ARB files
                         keyboardType: TextInputType.phone,
                         onSaved: (_) {},
                       ),
                       SizedBox(height: 20),
-                      Text('Privileges', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(AppLocalizations.of(context)!.privileges ?? 'Privileges', style: TextStyle(fontWeight: FontWeight.bold)), // TODO: Add 'privileges' to ARB files
                       SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
@@ -135,7 +136,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         children: privilegesList.map((priv) {
                           final selected = selectedPrivileges.contains(priv);
                           return FilterChip(
-                            label: Text(privilegeDisplayNames[priv] ?? priv),
+                            label: Text(privilegeKeyMap[priv] ?? priv),
                             selected: selected,
                             onSelected: (val) {
                               setState(() {
@@ -161,7 +162,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           Expanded(
                             child: OutlinedButton(
                               onPressed: () => Navigator.pop(context),
-                              child: Text('Cancel'),
+                              child: Text(AppLocalizations.of(context)!.cancel ?? 'Cancel'),
                             ),
                           ),
                           SizedBox(width: 12),
@@ -209,11 +210,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                         Navigator.pop(context);
                                         _fetchUsers();
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(isEdit ? 'User updated!' : 'User added!')),
+                                          SnackBar(content: Text(isEdit ? AppLocalizations.of(context)!.userUpdated ?? 'User updated!' : AppLocalizations.of(context)!.userAdded ?? 'User added!')), // TODO: Add 'userUpdated' and 'userAdded' to ARB files
                                         );
                                       }
                                     },
-                              child: Text(isEdit ? 'Save' : 'Add'),
+                              child: Text(isEdit ? AppLocalizations.of(context)!.save ?? 'Save' : AppLocalizations.of(context)!.add ?? 'Add'), // TODO: Add 'save' and 'add' to ARB files
                             ),
                           ),
                         ],
@@ -241,7 +242,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       .delete();
     _fetchUsers();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('User deleted.')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.userDeleted ?? 'User deleted.')), // TODO: Add 'userDeleted' to ARB files
     );
   }
 
@@ -249,7 +250,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('User Management'),
+        title: Text(AppLocalizations.of(context)!.userManagement ?? 'User Management'), // TODO: Add 'userManagement' to ARB files
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
@@ -266,12 +267,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 Icon(Icons.person_outline, size: 60, color: Colors.grey[400]),
                                 SizedBox(height: 16),
                                 Text(
-                                  'No users yet.',
+                                  AppLocalizations.of(context)!.noUsersYet ?? 'No users yet.', // TODO: Add 'noUsersYet' to ARB files
                                   style: TextStyle(fontSize: 18, color: Colors.grey[700]),
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  'Create a user for yourself first (with all privileges enabled) before adding other users.',
+                                  AppLocalizations.of(context)!.createUserFirst ?? 'Create a user for yourself first (with all privileges enabled) before adding other users.', // TODO: Add 'createUserFirst' to ARB files
                                   textAlign: TextAlign.center,
                                   style: TextStyle(fontSize: 15, color: Colors.grey[500]),
                                 ),
@@ -326,7 +327,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
       floatingActionButton: FloatingActionButton.extended(
         icon: Icon(Icons.person_add),
-        label: Text('Add User'),
+        label: Text(AppLocalizations.of(context)!.addUser ?? 'Add User'), // TODO: Add 'addUser' to ARB files
         onPressed: () => _showUserBottomSheet(),
       ),
     );

@@ -52,45 +52,58 @@ class Sell{
   }
 
   Sell.fromShopifyOrder(Map<String, dynamic> order, List<Product> allProducts) {
-    shopifyId = order['id'];
-    date = DateTime.parse(order['created_at']);
-    status = order['financial_status'];
-    
-    if (order['line_items']?.isNotEmpty == true) {
-      final lineItem = order['line_items'][0];
-      quantity = lineItem['quantity'];
-      priceOfSell = (double.parse(lineItem['price'])).round() - (double.parse(lineItem['total_discount'])).round();
-      
-      // Find matching product from allProducts list
-      // product = Product(
-      //   shopifyId : lineItem['product_id'],
-      //   name: lineItem['title'],
-      // );
-      product = _findProductByShopifyId(lineItem['product_id'], allProducts);
-      print("producttttttttttt: $product");
-      size = ProductSize(name: lineItem['variant_title']);
-      
-      // Calculate profit
-      if (product?.price != null) {
-        profit = priceOfSell! - (product!.price! * quantity!);
-      }
-    }
+    try{
+      shopifyId = order['id'];
+      date = DateTime.parse(order['created_at']);
+      status = order['financial_status'];
+      if (order['line_items']?.isNotEmpty == true) {
+        final lineItem = order['line_items'][0];
+        quantity = lineItem['quantity'];
+        priceOfSell = (double.parse(lineItem['price'])).round() - (double.parse(lineItem['total_discount'])).round();
+        // Find matching product from allProducts list
+        // product = Product(
+        //   shopifyId : lineItem['product_id'],
+        //   name: lineItem['title'],
+        // );
+        product = _findProductByShopifyId(lineItem, allProducts);
+        size = ProductSize(name: lineItem['variant_title']);
 
-    // Set default values
-    sideExpenses = [];
-    extraExpenses = 0;
-    isRefunded = (order['refunds'] != null && (order['refunds'] as List).isNotEmpty);
-    place = SellPlace.online;
+        // Calculate profit
+        if (product?.price != null) {
+          try{ profit = priceOfSell! - (product!.price! * quantity!); }
+          catch(e){ profit = 0; }
+        }
+      }
+
+      // Set default values
+      sideExpenses = [];
+      extraExpenses = 0;
+      isRefunded = (order['refunds'] != null && (order['refunds'] as List).isNotEmpty);
+      place = SellPlace.online;
+    }
+    catch(e){
+      print("+++++++++++++++++++++++++++++++++++++++++++++");
+      print("Erorrrrrrrrrrr: $e");
+      print("+++++++++++++++++++++++++++++++++++++++++++++");
+    }
   }
 
-  Product? _findProductByShopifyId(int shopifyId, List<Product> products) {
+  Product? _findProductByShopifyId(Map<String, dynamic> data, List<Product> products) {
     try {
-      return products.firstWhere(
-        (product) {
-          return product.shopifyId == shopifyId;
-        },
-        orElse: () => throw Exception('Product not found'),
-      );
+      if(data["product_id"] == null){
+        return Product(
+          name: data["title"],
+          //price: (double.parse(data['price'] ?? "0")).round() - (double.parse(data['total_discount'] ?? "0")).round()
+        );
+      }
+      else{
+        return products.firstWhere(
+          (product) {
+            return product.shopifyId == data["product_id"];
+          },
+          orElse: () => throw Exception('Product not found'),
+        );
+      }
     } catch (e) {
       debugPrint('Error finding product with Shopify ID $shopifyId: $e');
       return null;

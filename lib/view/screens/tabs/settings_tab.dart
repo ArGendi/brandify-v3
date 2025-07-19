@@ -108,31 +108,30 @@ class SettingsTab extends StatelessWidget {
                     );
                   },
                 ),
-                
-                  BlocBuilder<AppUserCubit, AppUserState>(
-                    builder: (context, state) {
-                      if (context.read<AppUserCubit>().privileges.contains(
-                        Privilege.userManagement,
-                      )){
-                        return _buildSettingItem(
-                          'User Management',
-                          Icons.group,
-                          'Create and manage users with limited privileges',
-                          () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => UserManagementScreen(),
-                              ),
-                            );
-                          },
-                        );
-                      }
-                      else{
-                        return Container();
-                      }
-                    },
-                  ),
+                BlocBuilder<AppUserCubit, AppUserState>(
+                  builder: (context, state) {
+                    if (context.read<AppUserCubit>().privileges.contains(
+                      Privilege.userManagement,
+                    )){
+                      return _buildSettingItem(
+                        AppLocalizations.of(context)!.userManagement,
+                        Icons.group,
+                        AppLocalizations.of(context)!.userManagementDesc,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => UserManagementScreen(),
+                            ),
+                          );
+                        },
+                      );
+                    }
+                    else{
+                      return Container();
+                    }
+                  },
+                ),
 
                 // _buildSettingItem(
                 //   AppLocalizations.of(context)!.changePackage,

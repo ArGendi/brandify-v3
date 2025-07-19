@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
+import 'package:flutter/services.dart'; // For SystemNavigator.pop()
+import 'dart:io'; // For exit(0)
 
 // Local imports
 import 'package:brandify/constants.dart';
@@ -49,8 +51,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  late TutorialCoachMark tutorialCoachMark;
-  List<TargetFocus> targets = [];
+  // late TutorialCoachMark tutorialCoachMark;
+  // List<TargetFocus> targets = [];
   final GlobalKey productsKey = GlobalKey();
   final GlobalKey expensesKey = GlobalKey();
   final GlobalKey adsKey = GlobalKey();
@@ -145,104 +147,109 @@ class _HomeScreenState extends State<HomeScreen> {
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
     bool isLoading = false;
+    bool loggedIn = false;
     await showDialog(
       context: navigatorKey.currentContext!,
       barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Text(
-                        'User Login',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: mainColor,
-                        ),
-                      ),
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Text(
+                    "${AppLocalizations.of(dialogContext)!.welcomeTo} ${dialogContext.read<AppUserCubit>().brandName ?? 'Brandify'}" +
+                      '\n' +
+                      AppLocalizations.of(dialogContext)!.enterInternalCredentials,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      //fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: mainColor,
                     ),
-                    SizedBox(height: 24),
-                    CustomTextFormField(
-                      controller: usernameController,
-                      text: 'Username',
-                      onSaved: (_) {},
-                      onValidate: (_) => null,
-                      prefix: Icon(Icons.person, color: mainColor),
-                    ),
-                    SizedBox(height: 16),
-                    CustomTextFormField(
-                      controller: passwordController,
-                      text: 'Password',
-                      obscureText: true,
-                      onSaved: (_) {},
-                      onValidate: (_) => null,
-                      prefix: Icon(Icons.lock, color: mainColor),
-                    ),
-                    if (errorText != null) ...[
-                      SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          errorText!,
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                    SizedBox(height: 24),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: mainColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              setState(() => isLoading = true);
-                              final username = usernameController.text.trim();
-                              final password = passwordController.text.trim();
-                              final match = subusersQuery.docs.where(
-                                (doc) =>
-                                    (doc['username'] == username &&
-                                     doc['password'] == password),
-                              ).toList();
-                              if (match.isNotEmpty) {
-                                // Save to cache
-                                await CacheUsernameExtension.setUsername(username);
-                                await CachePasswordExtension.setPassword(password);
-                                // Fetch and set privileges for session
-                                final privs = List<String>.from(match.first['privileges'] ?? []);
-                                AppUserCubit.get(navigatorKey.currentContext!).setPrivileges(privs);
-                                Navigator.of(context).pop();
-                              } else {
-                                setState(() {
-                                  errorText = 'Invalid username or password';
-                                  isLoading = false;
-                                });
-                              }
-                            },
-                      child: isLoading
-                          ? SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text('Start', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
+                SizedBox(height: 24),
+                CustomTextFormField(
+                  controller: usernameController,
+                  text: AppLocalizations.of(dialogContext)!.username,
+                  onSaved: (_) {},
+                  onValidate: (_) => null,
+                  prefix: Icon(Icons.person, color: mainColor),
+                ),
+                SizedBox(height: 16),
+                CustomTextFormField(
+                  controller: passwordController,
+                  text: AppLocalizations.of(dialogContext)!.password,
+                  obscureText: true,
+                  onSaved: (_) {},
+                  onValidate: (_) => null,
+                  prefix: Icon(Icons.lock, color: mainColor),
+                ),
+                if (errorText != null) ...[
+                  SizedBox(height: 12),
+                  Center(
+                    child: Text(
+                      AppLocalizations.of(dialogContext)!.invalidUsernameOrPassword,
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+                SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: mainColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setState(() => isLoading = true);
+                          final username = usernameController.text.trim();
+                          final password = passwordController.text.trim();
+                          final match = subusersQuery.docs.where(
+                            (doc) =>
+                                (doc['username'] == username &&
+                                 doc['password'] == password),
+                          ).toList();
+                          if (match.isNotEmpty) {
+                            // Save to cache
+                            await CacheUsernameExtension.setUsername(username);
+                            await CachePasswordExtension.setPassword(password);
+                            // Fetch and set privileges for session
+                            final privs = List<String>.from(match.first['privileges'] ?? []);
+                            AppUserCubit.get(navigatorKey.currentContext!).setPrivileges(privs);
+                            loggedIn = true;
+                            Navigator.of(dialogContext).pop();
+                          } else {
+                            setState(() {
+                              errorText = AppLocalizations.of(dialogContext)!.invalidUsernameOrPassword;
+                              isLoading = false;
+                            });
+                          }
+                        },
+                  child: isLoading
+                      ? SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(AppLocalizations.of(dialogContext)!.start, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
+    if (!loggedIn) {
+      // User dismissed dialog without logging in, turn off all privileges
+      AppUserCubit.get(navigatorKey.currentContext!).setPrivileges([]);
+    }
   }
 
   void initializeReports(
@@ -273,69 +280,69 @@ class _HomeScreenState extends State<HomeScreen> {
     // });
   }
 
-  void _initTargets() {
-    targets = [
-      TargetFocus(
-        identify: "products",
-        keyTarget: productsKey,
-        alignSkip: Alignment.topRight,
-        contents: [
-          TargetContent(
-            align: ContentAlign.bottom,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.products,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.manageInventory,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ];
-  }
+  // void _initTargets() {
+  //   targets = [
+  //     TargetFocus(
+  //       identify: "products",
+  //       keyTarget: productsKey,
+  //       alignSkip: Alignment.topRight,
+  //       contents: [
+  //         TargetContent(
+  //           align: ContentAlign.bottom,
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 AppLocalizations.of(context)!.products,
+  //                 style: const TextStyle(
+  //                   color: Colors.white,
+  //                   fontSize: 20,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 8),
+  //               Text(
+  //                 AppLocalizations.of(context)!.manageInventory,
+  //                 style: const TextStyle(color: Colors.white),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   ];
+  // }
 
-  void _initTutorial() {
-    tutorialCoachMark = TutorialCoachMark(
-      targets: targets,
-      colorShadow: Colors.black,
-      textSkip: AppLocalizations.of(context)!.skip,
-      paddingFocus: 10,
-      opacityShadow: 0.8,
-      onFinish: () {
-        debugPrint("Tutorial finished");
-        Cache.setBool("homeTutorialCoach", true);
-      },
-      onClickTarget: (target) {
-        debugPrint('Clicked on ${target.identify}');
-      },
-      onSkip: () {
-        debugPrint("Tutorial skipped");
-        Cache.setBool("homeTutorialCoach", true);
-        return true;
-      },
-    );
-  }
+  // void _initTutorial() {
+  //   tutorialCoachMark = TutorialCoachMark(
+  //     targets: targets,
+  //     colorShadow: Colors.black,
+  //     textSkip: AppLocalizations.of(context)!.skip,
+  //     paddingFocus: 10,
+  //     opacityShadow: 0.8,
+  //     onFinish: () {
+  //       debugPrint("Tutorial finished");
+  //       Cache.setBool("homeTutorialCoach", true);
+  //     },
+  //     onClickTarget: (target) {
+  //       debugPrint('Clicked on ${target.identify}');
+  //     },
+  //     onSkip: () {
+  //       debugPrint("Tutorial skipped");
+  //       Cache.setBool("homeTutorialCoach", true);
+  //       return true;
+  //     },
+  //   );
+  // }
 
-  void showTutorial() {
-    if (mounted) {
-      if(!(Cache.getBool("homeTutorialCoach") ?? false)){
-        tutorialCoachMark.show(context: context);
-      }
-    }
-  }
+  // void showTutorial() {
+  //   if (mounted) {
+  //     if(!(Cache.getBool("homeTutorialCoach") ?? false)){
+  //       tutorialCoachMark.show(context: context);
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {

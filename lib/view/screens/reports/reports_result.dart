@@ -90,7 +90,7 @@ class _ReportsResultState extends State<ReportsResult> {
     _timer4s = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => loadingMessage = AppLocalizations.of(context)!.loadingDoingMyBest);
     });
-    _timer8s = Timer(const Duration(seconds: 12), () {
+    _timer8s = Timer(const Duration(seconds: 16), () {
       if (mounted) setState(() => loadingMessage = AppLocalizations.of(context)!.loadingAreYouReady);
     });
     getReportData();

@@ -91,7 +91,6 @@ class AllSellsCubit extends Cubit<AllSellsState> {
           for(var one in shopifySells){
             Sell newSell = Sell.fromShopifyOrder(one, allProducts ?? []);
             sells.add(newSell);
-            print(sells);
           }
           print('✅ Totaaaaaaaaaaal selllllllllllllllls: ${sells.length}');
           var response = await SellsServices().getSells();
@@ -105,6 +104,7 @@ class AllSellsCubit extends Cubit<AllSellsState> {
     }
     catch(e){
       sells = List.from(temp);
+      print("Erroroooooooooooooooo: $e");
       emit(SuccessAllSellsState());
     }
     
@@ -136,12 +136,16 @@ class AllSellsCubit extends Cubit<AllSellsState> {
         shopify: () async {
           // Get Shopify orders in date range
           List shopifySells = await ShopifyServices().getPaidOrdersInDateRange(fromDate, toDate);
-          
+          int counter = 0;
           for (var one in shopifySells) {
             Sell newSell = Sell.fromShopifyOrder(one, allProducts ?? []);
+            if(newSell.isRefunded){
+              counter++;
+            }
             sells.add(newSell);
           }
           print('✅ Total Shopify sells in date range: ${sells.length}');
+          print("counter: $counter");
           
           // Get local sells in date range
           var response = await SellsServices().getSellsInDateRange(fromDate, toDate);

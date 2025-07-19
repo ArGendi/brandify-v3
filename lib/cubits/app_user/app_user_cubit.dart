@@ -326,7 +326,7 @@ class AppUserCubit extends Cubit<AppUserState> {
   void setPrivileges(List<String> privs) {
     print(privs);
     privileges = privs.map((e) => PrivilegeExtension.fromString(e)).whereType<Privilege>().toList();
-    emit(AppUserLoaded());
+    emit(AppUserDataValuesLoading());
   }
 
   List<Privilege> getPrivileges() => privileges;
